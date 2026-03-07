@@ -1,3 +1,4 @@
+// ─────────────────────────────────────────────
 // Инициализация карты
 const map = L.map('map', {
   crs: L.CRS.Simple,
@@ -23,13 +24,16 @@ const offsetX = 1027.5;
 const offsetY = 1027.5;
 const angle = Math.PI / 2;
 
-// URLs Google Sheets
-const sheet1URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?output=csv';
-const sheet2URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?gid=0&single=true&output=csv';
+// ─────────────────────────────────────────────
+// Google Sheets CSV ссылки
+const sheet1URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?gid=0&single=true&output=csv';
+const sheet2URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?gid=1734047695&single=true&output=csv';
 
 let provinceData = {};
 let countryColors = {};
 
+// ─────────────────────────────────────────────
+// Простая функция парсинга CSV
 function parseCSV(text) {
   const lines = text.trim().split('\n');
   const data = {};
@@ -41,11 +45,13 @@ function parseCSV(text) {
   return data;
 }
 
+// ─────────────────────────────────────────────
 // Загружаем оба листа
 Promise.all([
   fetch(sheet1URL).then(r => r.text()),
   fetch(sheet2URL).then(r => r.text())
 ]).then(([csv1, csv2]) => {
+
   // Лист1 — данные по провинциям
   const lines1 = csv1.trim().split('\n');
   for (let i = 1; i < lines1.length; i++) {
@@ -84,28 +90,36 @@ function loadGeoJSON() {
       return r.json();
     })
     .then(data => {
+
       const recalculatedFeatures = data.features.map(feature => {
         const coords = feature.geometry.coordinates.map(polygon =>
           polygon.map(ring =>
             ring.map(point => {
               const x = point[0];
               const y = point[1];
+
               const px = (x - (-760.292207764065)) / 2.370967741935;
               const py = (y - 1579.390922422695) / (-2.370919458304);
+
               const centerPx = imgWidth / 2;
               const centerPy = imgHeight / 2;
               const dx = px - centerPx;
               const dy = py - centerPy;
+
               const cos = Math.cos(angle);
               const sin = Math.sin(angle);
+
               const newPx = cos * dx - sin * dy + centerPx;
               const newPy = sin * dx + cos * dy + centerPy;
+
               const finalPx = newPx + offsetX;
               const finalPy = newPy + offsetY;
+
               return [finalPy, finalPx];
             })
           )
         );
+
         return { ...feature, geometry: { ...feature.geometry, coordinates: coords } };
       });
 
@@ -118,13 +132,12 @@ function loadGeoJSON() {
               const state = provinceData[id].state;
               const color = countryColors[state];
               if (color) {
-                // Все провинции одного государства окрашиваются одинаково
                 return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
               }
             }
             return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
           },
-          onEachFeature: function (feature, layer) {
+          onEachFeature: function(feature, layer) {
             const id = feature.properties?.id;
             if (id != null) {
               const info = provinceData[id];
@@ -144,21 +157,21 @@ ID: ${id}<br>
               layer.bindPopup(popupContent, { autoPan: true, closeButton: true });
             }
 
-            layer.on('click', function (e) {
+            layer.on('click', function(e) {
               provincesLayer.resetStyle();
               e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
               e.target.bringToFront();
               layer.openPopup();
             });
 
-            layer.on('popupclose', function () { provincesLayer.resetStyle(); });
+            layer.on('popupclose', function() { provincesLayer.resetStyle(); });
           }
         }
       ).addTo(map);
+
     })
     .catch(error => {
       console.error('Ошибка:', error);
       alert('Не удалось загрузить provinces.geojson');
     });
-
 }
