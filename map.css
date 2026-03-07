@@ -1,0 +1,19 @@
+html, body, #map {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #f0f0f0;
+  font-family: system-ui, sans-serif;
+}
+
+.leaflet-popup-content {
+  font-size: 15px;
+  padding: 1px 3px;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 1px;
+}
