@@ -70,3 +70,23 @@ top: 2px
 .leaflet-tooltip-right:before {
     display: none;
     } 
+
+/* Панель информации о провинции */
+.province-info-panel {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px;
+  border: 1px solid #ccc;
+  max-width: 220px;
+  font-size: 14px;
+  line-height: 1.3em;
+  overflow-wrap: break-word;
+}
+
+/* Мобильные устройства */
+@media (max-width: 600px) {
+  .province-info-panel {
+    max-width: 150px;
+    font-size: 12px;
+    padding: 6px;
+  }
+}
