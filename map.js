@@ -165,7 +165,9 @@ ID: ${id}<br>
             });
 
             layer.on('popupclose', function() { provincesLayer.resetStyle(); });
-          }
+          },
+          smoothFactor: 0,  // Отключаем упрощение геометрии при отдалении
+          noClip: true      // Не обрезаем полигоны по границам карты
         }
       ).addTo(map);
 
