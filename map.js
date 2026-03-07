@@ -53,7 +53,7 @@ const markerLayers = {
 };
 
 // Слой для перемещаемого маркера координат
-const coordinateTrackingLayer = L.layerGroup().addTo(map);
+const coordinateTrackingLayer = L.layerGroup();
 const capitalMarker = L.marker([4500, 4500], { icon: iconTypes['Столица'], draggable: true }).addTo(coordinateTrackingLayer);
 capitalMarker.bindPopup(`<b>Столица</b><br>Координаты: ${capitalMarker.getLatLng().lat}, ${capitalMarker.getLatLng().lng}`);
 capitalMarker.on('dragend', e => {
@@ -260,3 +260,4 @@ function loadMarkers() {
     'Отслеживание координат': coordinateTrackingLayer
   }).addTo(map);
 }
+
