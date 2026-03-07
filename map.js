@@ -34,6 +34,7 @@ let provinceData = {};
 let countryColors = {};
 let provincesLayer;
 let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
+const allTooltips = []; // Для хранения всех tooltip'ов
 
 // ───────────────────────────────
 // Иконки для маркеров
@@ -44,6 +45,7 @@ const iconTypes = {
   'Порт': L.IconMaterial.icon({ icon: 'anchor', iconColor: 'white', markerColor: 'SteelBlue', outlineColor: 'black', outlineWidth: 2, iconSize: [12, 16], popupAnchor: [0, -16] })
 };
 
+// ───────────────────────────────
 // Группы слоев для маркеров
 const markerLayers = {
   'Столица': L.layerGroup().addTo(map),
@@ -52,7 +54,8 @@ const markerLayers = {
   'Порт': L.layerGroup().addTo(map)
 };
 
-// Слой для перемещаемого маркера координат
+// ───────────────────────────────
+// Слой для перемещаемого маркера координат (по умолчанию выключен)
 const coordinateTrackingLayer = L.layerGroup();
 const capitalMarker = L.marker([4500, 4500], { icon: iconTypes['Столица'], draggable: true }).addTo(coordinateTrackingLayer);
 capitalMarker.bindPopup(`<b>Столица</b><br>Координаты: ${capitalMarker.getLatLng().lat}, ${capitalMarker.getLatLng().lng}`);
@@ -126,7 +129,7 @@ function loadGeoJSON() {
 }
 
 // ───────────────────────────────
-// Функция для popup и клика по провинции
+// Popup и подсветка провинций
 function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
   if (!id) return;
@@ -148,7 +151,7 @@ function onEachProvince(feature, layer) {
 }
 
 // ───────────────────────────────
-// Легенда
+// Легенда государств
 function highlightState(state) {
   provincesLayer.eachLayer(l => {
     const id = l.feature.properties?.id;
@@ -230,7 +233,7 @@ function createIdToggleButton() {
 }
 
 // ───────────────────────────────
-// Загрузка маркеров из Google Sheets
+// Загрузка маркеров
 function loadMarkers() {
   fetch(markersSheetURL)
     .then(r => r.text())
@@ -243,11 +246,23 @@ function loadMarkers() {
           if (!isNaN(lat) && !isNaN(lng) && iconTypes[type]) {
             const marker = L.marker([lat, lng], { icon: iconTypes[type] })
               .bindPopup(`<div class="popup-header">${name}</div><div class="popup-description">${desc}</div>`);
-            if (type !== 'Порт') marker.bindTooltip(name, { permanent: true, direction: 'right', offset: L.point(11, -15) });
+
+            // Tooltip сохраняем, но скрываем по умолчанию
+            if (type !== 'Порт') {
+              const tooltip = L.tooltip({ permanent: true, direction: 'right', offset: L.point(11, -15) })
+                .setContent(name)
+                .setOpacity(0);
+              marker.bindTooltip(tooltip);
+              allTooltips.push(tooltip);
+            }
+
             markerLayers[type].addLayer(marker);
           }
         }
       });
+
+      // Добавляем кнопку для включения/выключения названий маркеров
+      createMarkerNamesToggleButton();
     })
     .catch(err => console.error("Ошибка загрузки маркеров:", err));
 
@@ -261,3 +276,27 @@ function loadMarkers() {
   }).addTo(map);
 }
 
+// ───────────────────────────────
+// Кнопка для показа/скрытия названий маркеров
+function createMarkerNamesToggleButton() {
+  const toggle = L.control({ position: 'topleft' });
+  toggle.onAdd = () => {
+    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    const button = L.DomUtil.create('a', '', div);
+    button.innerHTML = 'Назв.'; button.href = '#';
+    button.title = 'Показать/Скрыть названия маркеров';
+    button.style.textAlign = 'center'; button.style.fontWeight = 'bold'; button.style.fontSize = '12px';
+    button.style.width = '30px'; button.style.height = '30px'; button.style.lineHeight = '30px';
+    button.style.backgroundColor = 'white'; button.style.border = '1px solid #ccc'; button.style.cursor = 'pointer';
+
+    let visible = false;
+    button.onclick = e => {
+      e.preventDefault();
+      visible = !visible;
+      allTooltips.forEach(t => t.setOpacity(visible ? 1 : 0));
+      button.style.backgroundColor = visible ? '#ffd' : 'white';
+    };
+    return div;
+  };
+  toggle.addTo(map);
+}
