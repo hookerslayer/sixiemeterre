@@ -36,6 +36,41 @@ let provincesLayer;
 let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
 
 // ───────────────────────────────
+// Панель информации о провинции
+const infoPanel = L.control({position: 'bottomleft'});
+infoPanel.onAdd = function() {
+  const div = L.DomUtil.create('div', 'province-info-panel');
+  div.style.background = 'white';
+  div.style.padding = '10px';
+  div.style.border = '1px solid #ccc';
+  div.style.maxWidth = '250px';
+  div.innerHTML = '<b>Выберите провинцию</b>';
+  return div;
+};
+infoPanel.addTo(map);
+
+function showProvinceInfo(id) {
+  const div = document.querySelector('.province-info-panel');
+  const info = provinceData[id];
+  if (!info) return;
+  div.innerHTML = `
+    <b>ID:</b> ${id}<br>
+    <b>Площадь, км²:</b> ${info.area}<br>
+    <b>Название провинции:</b> ${info.name}<br>
+    <b>Государство:</b> ${info.state}<br>
+    <b>Раса:</b> ${info.race}<br>
+    <b>Религия:</b> ${info.religion}<br>
+    <b>Население:</b> ${info.population}<br>
+    <b>Ресурс:</b> ${info.resource}
+  `;
+}
+
+function clearPanel() {
+  const div = document.querySelector('.province-info-panel');
+  div.innerHTML = '<b>Выберите провинцию</b>';
+}
+
+// ───────────────────────────────
 // Иконки для маркеров
 const iconTypes = {
   'Столица': L.IconMaterial.icon({ icon: 'star', iconColor: 'white', markerColor: '#B22222', outlineColor: 'black', outlineWidth: 2, iconSize: [25, 34], popupAnchor: [0, -34] }),
@@ -59,7 +94,6 @@ capitalMarker.bindPopup(`<b>Столица</b><br>Координаты: ${capita
 capitalMarker.on('dragend', e => {
   const pos = e.target.getLatLng();
   e.target.setPopupContent(`<b>Столица</b><br>Координаты: ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`).openPopup();
-  console.log(`Новые координаты: ${pos.lat}, ${pos.lng}`);
 });
 
 // ───────────────────────────────
@@ -126,29 +160,21 @@ function loadGeoJSON() {
 }
 
 // ───────────────────────────────
-// Функция для popup и клика по провинции
+// Клик по провинции и подсветка
 function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
   if (!id) return;
-
-  const info = provinceData[id];
-  let content = `ID: ${id}`;
-  if (info) {
-    content = `ID: ${id}<br>Площадь, км2: ${info.area}<br>Название провинции: ${info.name}<br>Государство: ${info.state}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Население: ${info.population}<br>Ресурс: ${info.resource}`;
-  }
-  layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', e => {
     provincesLayer.resetStyle();
     e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
     e.target.bringToFront();
-    layer.openPopup();
+    showProvinceInfo(id);
   });
-  layer.on('popupclose', () => provincesLayer.resetStyle());
 }
 
 // ───────────────────────────────
-// Легенда
+// Легенда государств
 function highlightState(state) {
   provincesLayer.eachLayer(l => {
     const id = l.feature.properties?.id;
