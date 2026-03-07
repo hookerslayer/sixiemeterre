@@ -33,42 +33,7 @@ const markersSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat
 let provinceData = {};
 let countryColors = {};
 let provincesLayer;
-let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
-
-// ───────────────────────────────
-// Панель информации о провинции
-const infoPanel = L.control({position: 'bottomleft'});
-infoPanel.onAdd = function() {
-  const div = L.DomUtil.create('div', 'province-info-panel');
-  div.style.background = 'white';
-  div.style.padding = '10px';
-  div.style.border = '1px solid #ccc';
-  div.style.maxWidth = '250px';
-  div.innerHTML = '<b>Выберите провинцию</b>';
-  return div;
-};
-infoPanel.addTo(map);
-
-function showProvinceInfo(id) {
-  const div = document.querySelector('.province-info-panel');
-  const info = provinceData[id];
-  if (!info) return;
-  div.innerHTML = `
-    <b>ID:</b> ${id}<br>
-    <b>Площадь, км²:</b> ${info.area}<br>
-    <b>Название провинции:</b> ${info.name}<br>
-    <b>Государство:</b> ${info.state}<br>
-    <b>Раса:</b> ${info.race}<br>
-    <b>Религия:</b> ${info.religion}<br>
-    <b>Население:</b> ${info.population}<br>
-    <b>Ресурс:</b> ${info.resource}
-  `;
-}
-
-function clearPanel() {
-  const div = document.querySelector('.province-info-panel');
-  div.innerHTML = '<b>Выберите провинцию</b>';
-}
+let idLayerGroup = L.layerGroup(); // Слой для ID (по желанию)
 
 // ───────────────────────────────
 // Иконки для маркеров
@@ -94,6 +59,7 @@ capitalMarker.bindPopup(`<b>Столица</b><br>Координаты: ${capita
 capitalMarker.on('dragend', e => {
   const pos = e.target.getLatLng();
   e.target.setPopupContent(`<b>Столица</b><br>Координаты: ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`).openPopup();
+  console.log(`Новые координаты: ${pos.lat}, ${pos.lng}`);
 });
 
 // ───────────────────────────────
@@ -160,13 +126,45 @@ function loadGeoJSON() {
 }
 
 // ───────────────────────────────
-// Клик по провинции и подсветка
+// Панель данных провинции
+const infoDiv = L.DomUtil.create('div', 'province-info-panel');
+infoDiv.style.position = 'absolute';
+infoDiv.style.bottom = '10px';
+infoDiv.style.left = '10px';
+infoDiv.style.zIndex = 1000;
+infoDiv.style.pointerEvents = 'none'; // чтобы не блокировать карту
+document.body.appendChild(infoDiv);
+
+// Показываем данные провинции
+function showProvinceInfo(id) {
+  const info = provinceData[id];
+  if (!info) return;
+  infoDiv.innerHTML = `
+    <b>ID:</b> ${id}<br>
+    <b>Площадь, км²:</b> ${info.area}<br>
+    <b>Название провинции:</b> ${info.name}<br>
+    <b>Государство:</b> ${info.state}<br>
+    <b>Раса:</b> ${info.race}<br>
+    <b>Религия:</b> ${info.religion}<br>
+    <b>Население:</b> ${info.population}<br>
+    <b>Ресурс:</b> ${info.resource}
+  `;
+}
+
+// Сброс панели и подсветки
+function resetProvinceInfo() {
+  provincesLayer.resetStyle();
+  infoDiv.innerHTML = '';
+}
+
+// ───────────────────────────────
+// Клик по провинции
 function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
   if (!id) return;
 
   layer.on('click', e => {
-    provincesLayer.resetStyle();
+    resetProvinceInfo();
     e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
     e.target.bringToFront();
     showProvinceInfo(id);
@@ -174,7 +172,23 @@ function onEachProvince(feature, layer) {
 }
 
 // ───────────────────────────────
-// Легенда государств
+// Клик по карте вне провинции сбрасывает выделение
+map.on('click', e => {
+  let clickedOnProvince = false;
+  map.eachLayer(layer => {
+    if (layer instanceof L.GeoJSON) {
+      layer.eachLayer(featureLayer => {
+        if (featureLayer.getBounds && featureLayer.getBounds().contains(e.latlng)) {
+          clickedOnProvince = true;
+        }
+      });
+    }
+  });
+  if (!clickedOnProvince) resetProvinceInfo();
+});
+
+// ───────────────────────────────
+// Легенда
 function highlightState(state) {
   provincesLayer.eachLayer(l => {
     const id = l.feature.properties?.id;
@@ -203,11 +217,16 @@ function createLegend() {
 
     for (const [state, color] of Object.entries(countryColors)) {
       const item = document.createElement('div');
-      item.style.display = 'flex'; item.style.alignItems = 'center'; item.style.marginBottom = '4px'; item.style.cursor = 'pointer';
+      item.style.display = 'flex'; item.style.alignItems = 'center';
+      item.style.marginBottom = '4px';
+      item.style.cursor = 'pointer';
 
       const colorBox = document.createElement('div');
-      colorBox.style.width = '20px'; colorBox.style.height = '20px'; colorBox.style.backgroundColor = color;
-      colorBox.style.marginRight = '6px'; colorBox.style.border = '1px solid #000';
+      colorBox.style.width = '20px';
+      colorBox.style.height = '20px';
+      colorBox.style.backgroundColor = color;
+      colorBox.style.marginRight = '6px';
+      colorBox.style.border = '1px solid #000';
 
       const label = document.createElement('span'); label.textContent = state;
 
@@ -222,41 +241,7 @@ function createLegend() {
 }
 
 // ───────────────────────────────
-// Слой ID провинций
-function generateIdLabels() {
-  idLayerGroup.clearLayers();
-  provincesLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
-    if (id) {
-      const center = l.getBounds().getCenter();
-      const icon = L.divIcon({ className: 'province-id-label', html: `<div style="font-size:18px; font-weight:bold; color:red; text-shadow:1px 1px 2px white;">${id}</div>`, iconSize: [30, 30] });
-      L.marker(center, { icon }).addTo(idLayerGroup);
-    }
-  });
-}
-function createIdToggleButton() {
-  const toggle = L.control({ position: 'topleft' });
-  toggle.onAdd = () => {
-    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-    const button = L.DomUtil.create('a', '', div);
-    button.innerHTML = 'ID'; button.href = '#'; button.title = 'Показать/Скрыть ID провинций';
-    button.style.textAlign = 'center'; button.style.fontWeight = 'bold'; button.style.fontSize = '14px';
-    button.style.width = '30px'; button.style.height = '30px'; button.style.lineHeight = '30px';
-    button.style.backgroundColor = 'white'; button.style.border = '1px solid #ccc'; button.style.cursor = 'pointer';
-
-    let visible = false;
-    button.onclick = e => {
-      e.preventDefault(); visible = !visible;
-      if (visible) { generateIdLabels(); idLayerGroup.addTo(map); button.style.backgroundColor = '#ffd'; }
-      else { idLayerGroup.remove(); button.style.backgroundColor = 'white'; }
-    };
-    return div;
-  };
-  toggle.addTo(map);
-}
-
-// ───────────────────────────────
-// Загрузка маркеров из Google Sheets
+// Загрузка маркеров
 function loadMarkers() {
   fetch(markersSheetURL)
     .then(r => r.text())
@@ -269,7 +254,8 @@ function loadMarkers() {
           if (!isNaN(lat) && !isNaN(lng) && iconTypes[type]) {
             const marker = L.marker([lat, lng], { icon: iconTypes[type] })
               .bindPopup(`<div class="popup-header">${name}</div><div class="popup-description">${desc}</div>`);
-            if (type !== 'Порт') marker.bindTooltip(name, { permanent: true, direction: 'right', offset: L.point(11, -15) });
+            // Убираем постоянные tooltip
+            if (type !== 'Порт') marker.bindTooltip(name, { permanent: false, direction: 'right', offset: L.point(11, -15) });
             markerLayers[type].addLayer(marker);
           }
         }
@@ -277,7 +263,7 @@ function loadMarkers() {
     })
     .catch(err => console.error("Ошибка загрузки маркеров:", err));
 
-  // Контрол слоёв для маркеров
+  // Контрол слоёв
   L.control.layers(null, {
     'Столицы': markerLayers['Столица'],
     'Города': markerLayers['Город'],
