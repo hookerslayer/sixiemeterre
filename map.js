@@ -289,3 +289,4 @@ function createIdToggleButton() {
   };
   toggleIdControl.addTo(map);
 }
+
