@@ -8,6 +8,13 @@ const map = L.map('map', {
   maxZoom: 0
 });
 
+// Полноэкранный контроль
+map.addControl(new L.Control.Fullscreen({
+  position: 'topleft',
+  title: 'Полноэкранный режим',
+  titleCancel: 'Выйти из полноэкранного режима'
+}));
+
 const imgWidth = 7015;
 const imgHeight = 4960;
 const imageBounds = [[0, imgHeight], [imgWidth, 0]];
@@ -32,12 +39,12 @@ const sheet2URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8
 let provinceData = {};
 let countryColors = {};
 let provincesLayer;
+let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
 
 // ───────────────────────────────
 // Загрузка CSV
 Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.text())])
   .then(([csv1, csv2]) => {
-    // Лист1 — провинции
     const lines1 = csv1.trim().split('\n');
     for (let i = 1; i < lines1.length; i++) {
       const cols = lines1[i].split(',');
@@ -54,7 +61,6 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
       };
     }
 
-    // Лист2 — цвета государств
     const lines2 = csv2.trim().split('\n');
     for (let i = 1; i < lines2.length; i++) {
       const cols = lines2[i].split(',');
@@ -71,10 +77,7 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
 // Загрузка GeoJSON и подготовка карты
 function loadGeoJSON() {
   fetch('provinces.geojson')
-    .then(r => {
-      if (!r.ok) throw new Error('Не удалось загрузить provinces.geojson');
-      return r.json();
-    })
+    .then(r => r.ok ? r.json() : Promise.reject('Не удалось загрузить provinces.geojson'))
     .then(data => {
       const recalculatedFeatures = data.features.map(feature => {
         const coords = feature.geometry.coordinates.map(polygon =>
@@ -123,9 +126,9 @@ function loadGeoJSON() {
       }).addTo(map);
 
       createLegend();
-      createSearch();
+      createIdToggleButton();
     })
-    .catch(err => { console.error(err); alert('Не удалось загрузить provinces.geojson'); });
+    .catch(err => { console.error(err); alert(err); });
 }
 
 // ───────────────────────────────
@@ -185,7 +188,7 @@ function resetHighlight() {
 }
 
 // ───────────────────────────────
-// Создание интерактивной легенды
+// Легенда с интерактивной подсветкой
 function createLegend() {
   const legend = L.control({ position: 'topright' });
   legend.onAdd = function() {
@@ -227,41 +230,62 @@ function createLegend() {
 }
 
 // ───────────────────────────────
-// Создание поиска по ID
-function createSearch() {
-  const searchDiv = L.control({ position: 'topleft' });
-  searchDiv.onAdd = function() {
-    const div = L.DomUtil.create('div', 'info search');
-    div.style.background = 'white';
-    div.style.padding = '6px';
-    div.style.border = '1px solid #ccc';
+// Генерация ID провинций (только при включении слоя)
+function generateIdLabels() {
+  idLayerGroup.clearLayers();
+  provincesLayer.eachLayer(layer => {
+    const id = layer.feature.properties?.id;
+    if (id) {
+      const bounds = layer.getBounds();
+      const center = bounds.getCenter();
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'Введите ID провинции';
-    input.style.width = '140px';
-    input.style.marginRight = '4px';
-
-    const button = document.createElement('button');
-    button.textContent = 'Найти';
-
-    button.onclick = () => {
-      const id = input.value.trim();
-      if (!id || !provinceData[id]) { alert('Провинция не найдена'); return; }
-      provincesLayer.eachLayer(layer => {
-        if (layer.feature.properties?.id === id) {
-          provincesLayer.resetStyle();
-          layer.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
-          layer.bringToFront();
-          layer.openPopup();
-          map.fitBounds(layer.getBounds(), { padding: [100, 100] });
-        }
+      const icon = L.divIcon({
+        className: 'province-id-label',
+        html: `<div style="font-size:18px; font-weight:bold; color:red; text-shadow:1px 1px 2px white;">${id}</div>`,
+        iconSize: [30, 30]
       });
+
+      L.marker(center, { icon: icon }).addTo(idLayerGroup);
+    }
+  });
+}
+
+// ───────────────────────────────
+// Кнопка включения/выключения слоя с ID
+function createIdToggleButton() {
+  const toggleIdControl = L.control({ position: 'topleft' });
+  toggleIdControl.onAdd = function(map) {
+    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    const button = L.DomUtil.create('a', '', div);
+    button.innerHTML = 'ID';
+    button.href = '#';
+    button.title = 'Показать/Скрыть ID провинций';
+    button.style.textAlign = 'center';
+    button.style.fontWeight = 'bold';
+    button.style.fontSize = '14px';
+    button.style.width = '30px';
+    button.style.height = '30px';
+    button.style.lineHeight = '30px';
+    button.style.backgroundColor = 'white';
+    button.style.border = '1px solid #ccc';
+    button.style.cursor = 'pointer';
+
+    let visible = false;
+
+    button.onclick = function(e) {
+      e.preventDefault();
+      visible = !visible;
+      if (visible) {
+        generateIdLabels();
+        idLayerGroup.addTo(map);
+        button.style.backgroundColor = '#ffd';
+      } else {
+        idLayerGroup.remove();
+        button.style.backgroundColor = 'white';
+      }
     };
 
-    div.appendChild(input);
-    div.appendChild(button);
     return div;
   };
-  searchDiv.addTo(map);
+  toggleIdControl.addTo(map);
 }
