@@ -8,13 +8,6 @@ const map = L.map('map', {
   maxZoom: 0
 });
 
-// Полноэкранный контроль
-map.addControl(new L.Control.Fullscreen({
-  position: 'topleft',
-  title: 'Полноэкранный режим',
-  titleCancel: 'Выйти из полноэкранного режима'
-}));
-
 const imgWidth = 7015;
 const imgHeight = 4960;
 const imageBounds = [[0, imgHeight], [imgWidth, 0]];
@@ -289,4 +282,5 @@ function createIdToggleButton() {
   };
   toggleIdControl.addTo(map);
 }
+
 
