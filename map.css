@@ -16,4 +16,57 @@ body {
 
 .leaflet-popup-content-wrapper {
   border-radius: 1px;
+
 }
+
+.leaflet-marker-icon {
+will-change: top;
+transition: top 300ms;
+padding-bottom: 2px!important
+}
+
+.leaflet-marker-icon:hover {
+transition: top 125ms;
+top: 2px
+}
+
+.leaflet-popup-content-wrapper {
+    padding: 1px;
+    border-radius: 2px;
+}
+
+.leaflet-popup-tip {
+    background-color: white;
+}
+
+.popup-header {
+    color: black;
+    font-size: 16px;
+    text-decoration: bold;
+    padding: 0px;
+    border-radius: 5px;
+}
+
+.popup-description {
+    color: black;
+    font-size: 12px;
+    padding: 0px;
+    border-radius: 5px;
+}
+
+.leaflet-tooltip {
+        background-color: rgba(255, 255, 255, 0.8); /* Прозрачность фона */
+        border: 0px solid #ccc; /* Граница тултипа */
+        border-radius: 4px; /* Скругленные углы */
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0.2); /* Тень */
+        padding: 2px 3px; /* Отступы внутри тултипа */
+        pointer-events: none; /* Чтобы тултип не мешал взаимодействию с картой */
+}
+
+/* Удаление стрелочки */
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+    display: none;
+    } 
