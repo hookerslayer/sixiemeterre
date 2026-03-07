@@ -25,7 +25,7 @@ const angle = Math.PI / 2;
 
 // URLs Google Sheets
 const sheet1URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?output=csv';
-const sheet2URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?gid=123456789&single=true&output=csv';
+const sheet2URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?gid=0&single=true&output=csv';
 
 let provinceData = {};
 let countryColors = {};
@@ -160,4 +160,5 @@ ID: ${id}<br>
       console.error('Ошибка:', error);
       alert('Не удалось загрузить provinces.geojson');
     });
+
 }
