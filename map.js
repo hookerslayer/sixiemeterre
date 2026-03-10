@@ -306,7 +306,10 @@ function searchProvince() {
 
 }
 
-// Функция для popup и клика по провинции
+// Сохраняем GeoJSON слои глобально
+let geojsonLayers = [politicalLayer, religionLayer, raceLayer, resourceLayer, tradeZoneLayer];
+
+// Обновлённая функция onEachProvince
 function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
   if (!id) return;
@@ -319,22 +322,28 @@ function onEachProvince(feature, layer) {
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', e => {
-    // Сброс стиля у всех провинций группы
-    const activeLayer = getActiveLayer();
-    activeLayer.eachLayer(l => {
-      const lid = l.feature?.properties?.id;
-      if (!lid) return;
-
-      // Сброс стиля для всех, кроме кликнутой
-      if (lid === id) return; // кликнутая будет подсвечена ниже
-      if (activeLayer.resetStyle) activeLayer.resetStyle(l);
+    const activeLayer = getActiveLayer(); // L.LayerGroup
+    // Находим внутри него GeoJSON слой, у которого есть resetStyle
+    geojsonLayers.forEach(glayer => {
+      if (activeLayer.hasLayer(glayer)) {
+        glayer.eachLayer(l => {
+          // Сброс стиля для всех, кроме кликнутой группы
+          if (l.feature?.properties?.id !== id && glayer.resetStyle) {
+            glayer.resetStyle(l);
+          }
+        });
+      }
     });
 
     // Подсветка всех провинций с этим ID
-    activeLayer.eachLayer(l => {
-      if (l.feature?.properties?.id === id) {
-        l.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#ff0000', weight: 2 });
-        l.bringToFront();
+    geojsonLayers.forEach(glayer => {
+      if (activeLayer.hasLayer(glayer)) {
+        glayer.eachLayer(l => {
+          if (l.feature?.properties?.id === id) {
+            l.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#ff0000', weight: 2 });
+            l.bringToFront();
+          }
+        });
       }
     });
 
@@ -342,11 +351,14 @@ function onEachProvince(feature, layer) {
   });
 
   layer.on('popupclose', () => {
-    // Сброс стиля для всех провинций группы при закрытии popup
     const activeLayer = getActiveLayer();
-    activeLayer.eachLayer(l => {
-      if (l.feature?.properties?.id === id && activeLayer.resetStyle) {
-        activeLayer.resetStyle(l);
+    geojsonLayers.forEach(glayer => {
+      if (activeLayer.hasLayer(glayer)) {
+        glayer.eachLayer(l => {
+          if (l.feature?.properties?.id === id && glayer.resetStyle) {
+            glayer.resetStyle(l);
+          }
+        });
       }
     });
   });
