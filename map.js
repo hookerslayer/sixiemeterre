@@ -251,6 +251,7 @@ let geojsonLayers = [politicalLayer, religionLayer, raceLayer, resourceLayer, tr
 // ───────────────────────────────
 // Массив для хранения подсвеченных при поиске провинций
 let searchHighlights = [];
+let clickHighlights = [];
 
 // Получение текущего активного слоя
 function getActiveLayer() {
@@ -331,6 +332,17 @@ function searchProvince() {
 }
 
 // ───────────────────────────────
+// Вспомогательная функция для получения текущего стиля (учитывая активный слой)
+function getCurrentStyle(province) {
+  return {
+    fillColor: province.options.fillColor || '',
+    fillOpacity: province.options.fillOpacity || 0,
+    color: province.options.color || '#000',
+    weight: province.options.weight || 1.5,
+    opacity: province.options.opacity || 0
+  };
+}
+
 // Обработчик клика и pop-up для каждой провинции
 function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
@@ -344,38 +356,40 @@ function onEachProvince(feature, layer) {
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', () => {
-    // Сбрасываем предыдущую подсветку поиска
-    searchHighlights.forEach(prov => {
-      if (prov.defaultStyle) prov.setStyle(prov.defaultStyle);
-    });
+    // Сбрасываем подсветку поиска
+    searchHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
     searchHighlights = [];
 
-    // Сбрасываем предыдущую подсветку клика по любой провинции
-    geojsonLayers.forEach(layerGroup => {
-      layerGroup.eachLayer(l => {
-        if (!l.eachLayer) return;
-        l.eachLayer(p => {
-          if (p.setStyle && p.defaultStyle) p.setStyle(p.defaultStyle);
-        });
-      });
-    });
+    // Сбрасываем предыдущую подсветку клика
+    clickHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
+    clickHighlights = [];
 
-    // Подсветка выбранной провинции (или группы)
+    // Подсветка текущей провинции или группы
     geojsonLayers.forEach(layerGroup => {
       layerGroup.eachLayer(l => {
         if (!l.eachLayer) return;
         l.eachLayer(p => {
           const pId = p.feature?.properties?.id;
           if (pId === id) {
-            // Сохраняем исходный стиль
             p.defaultStyle = p.defaultStyle || getCurrentStyle(p);
-            p.setStyle({
-              fillColor: '#ffff99',
-              fillOpacity: 0.6,
-              color: '#ff0000',
-              weight: 2
-            });
+
+            // Если провинция нейтральная, подсвечиваем
+            const isNeutral = p.defaultStyle.fillOpacity === 0 || p.defaultStyle.fillColor === '';
+            if (isNeutral) {
+              p.setStyle({
+                fillColor: '#ffff99',
+                fillOpacity: 0.6,
+                color: '#000',
+                weight: 0
+              });
+            } else {
+              // Если уже окрашена (активный слой), оставляем fillColor и fillOpacity, но подсвечиваем слегка
+              p.setStyle({
+                fillOpacity: Math.max(p.defaultStyle.fillOpacity, 0.6),
+              });
+            }
             p.bringToFront();
+            clickHighlights.push(p);
           }
         });
       });
@@ -384,6 +398,16 @@ function onEachProvince(feature, layer) {
     layer.openPopup();
   });
 }
+
+// Сброс подсветки при клике по пустой области карты
+map.on('click', e => {
+  // Сброс подсветки клика
+  clickHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
+  clickHighlights = [];
+  // Сброс подсветки поиска
+  searchHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
+  searchHighlights = [];
+});
 
 // ───────────────────────────────
 // Легенда
