@@ -245,71 +245,77 @@ function getActiveLayer() {
   return politicalLayer;
 }
 
-// Поиск по ID
-function searchProvinceById(id) {
-
-  const currentLayer = getActiveLayer();
-
-  // сброс предыдущего поиска
-  if (searchHighlight) {
-    searchHighlight.setStyle(searchHighlight.defaultStyle);
-    searchHighlight = null;
-  }
-
-  let found = false;
-
-  currentLayer.eachLayer(geoLayer => {
-
-    if (!geoLayer.eachLayer) return;
-
-    geoLayer.eachLayer(province => {
-
-      const provinceId = province.feature?.properties?.id;
-
-      if (provinceId == id) {
-
-        searchHighlight = province;
-
-      province.setStyle({
-        color: '#ff0000',
-        weight: 3,
-        opacity: 1,
-        fillOpacity: 0.3
-      });
-
-        province.bringToFront();
-
-        const bounds = province.getBounds();
-        map.fitBounds(bounds, { maxZoom: -1 });
-
-        found = true;
-      }
-
-    });
-
-  });
-
-  if (!found) {
-    alert("Провинция с таким ID не найдена");
-  }
-
-}
-
-function searchProvince() {
-
-  const input = document.getElementById("provinceSearch");
-  const id = input.value.trim();
-
-  if (!id) return;
-
-  searchProvinceById(id);
-
-}
-
 // Сохраняем GeoJSON слои глобально
 let geojsonLayers = [politicalLayer, religionLayer, raceLayer, resourceLayer, tradeZoneLayer];
 
-// Обновлённая функция onEachProvince
+// ───────────────────────────────
+// Глобальная переменная для подсветки поиска
+let searchHighlights = [];
+
+// Функция подсветки всех провинций с данным ID
+function highlightProvinceById(id) {
+  // Сбрасываем подсветку прошлой поисковой выборки
+  searchHighlights.forEach(prov => {
+    if (prov.defaultStyle) prov.setStyle(prov.defaultStyle);
+  });
+  searchHighlights = [];
+
+  let found = false;
+
+  // Проходим по всем слоям geojson
+  geojsonLayers.forEach(layerGroup => {
+    layerGroup.eachLayer(layer => {
+      if (!layer.eachLayer) return;
+
+      layer.eachLayer(province => {
+        const provinceId = province.feature?.properties?.id;
+        if (provinceId === id) {
+          // Сохраняем исходный стиль для сброса
+          province.defaultStyle = province.defaultStyle || {
+            fillColor: province.options.fillColor || '',
+            fillOpacity: province.options.fillOpacity || 0,
+            color: province.options.color || '#000',
+            weight: province.options.weight || 1.5,
+            opacity: province.options.opacity || 0
+          };
+
+          // Подсветка красной обводкой
+          province.setStyle({
+            color: '#ff0000',
+            weight: 3,
+            opacity: 1,
+            fillOpacity: province.defaultStyle.fillOpacity * 0.7 || 0.3
+          });
+
+          province.bringToFront();
+
+          // Добавляем в массив подсвеченных
+          searchHighlights.push(province);
+
+          found = true;
+        }
+      });
+    });
+  });
+
+  // Центрируем карту на первую найденную провинцию
+  if (found && searchHighlights.length > 0) {
+    map.fitBounds(searchHighlights[0].getBounds(), { maxZoom: -1 });
+  }
+
+  if (!found) alert("Провинция с таким ID не найдена");
+}
+
+// Обработчик кнопки поиска
+function searchProvince() {
+  const input = document.getElementById("provinceSearch");
+  const id = input.value.trim();
+  if (!id) return;
+  highlightProvinceById(id);
+}
+
+// ───────────────────────────────
+// Сброс подсветки при клике на любую провинцию
 function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
   if (!id) return;
@@ -322,45 +328,35 @@ function onEachProvince(feature, layer) {
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', e => {
-    const activeLayer = getActiveLayer(); // L.LayerGroup
-    // Находим внутри него GeoJSON слой, у которого есть resetStyle
-    geojsonLayers.forEach(glayer => {
-      if (activeLayer.hasLayer(glayer)) {
-        glayer.eachLayer(l => {
-          // Сброс стиля для всех, кроме кликнутой группы
-          if (l.feature?.properties?.id !== id && glayer.resetStyle) {
-            glayer.resetStyle(l);
-          }
-        });
-      }
+    // Сбрасываем подсветку поиска
+    searchHighlights.forEach(prov => {
+      if (prov.defaultStyle) prov.setStyle(prov.defaultStyle);
     });
+    searchHighlights = [];
 
-    // Подсветка всех провинций с этим ID
-    geojsonLayers.forEach(glayer => {
-      if (activeLayer.hasLayer(glayer)) {
-        glayer.eachLayer(l => {
-          if (l.feature?.properties?.id === id) {
-            l.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#ff0000', weight: 2 });
-            l.bringToFront();
-          }
-        });
-      }
-    });
+    // Подсветка выбранной провинции
+    const activeLayer = getActiveLayer();
+    if (activeLayer && activeLayer.eachLayer) {
+      activeLayer.eachLayer(l => {
+        if (l.setStyle && l.feature?.properties?.id === id) {
+          l.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
+          l.bringToFront();
+        } else if (l.setStyle && l.defaultStyle) {
+          l.setStyle(l.defaultStyle);
+        }
+      });
+    }
 
     layer.openPopup();
   });
 
   layer.on('popupclose', () => {
     const activeLayer = getActiveLayer();
-    geojsonLayers.forEach(glayer => {
-      if (activeLayer.hasLayer(glayer)) {
-        glayer.eachLayer(l => {
-          if (l.feature?.properties?.id === id && glayer.resetStyle) {
-            glayer.resetStyle(l);
-          }
-        });
-      }
-    });
+    if (activeLayer && activeLayer.eachLayer) {
+      activeLayer.eachLayer(l => {
+        if (l.setStyle && l.defaultStyle) l.setStyle(l.defaultStyle);
+      });
+    }
   });
 }
 
