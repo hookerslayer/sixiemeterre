@@ -20,14 +20,6 @@ L.imageOverlay('karta.png', imageBounds, {
 
 map.fitBounds(imageBounds);
 
-map.on('click', e => {
-  // Если клик не по провинции — просто закрываем popup и сбрасываем подсветку
-  if (!e.target || !e.target.feature) {
-    map.closePopup();
-    resetHighlight();
-  }
-});
-
 const offsetX = 1027.5;
 const offsetY = 1027.5;
 const angle = Math.PI / 2;
@@ -42,15 +34,13 @@ const markersSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat
 
 let provinceData = {};
 let countryColors = {};
-let provincesLayer;
-let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
 let religionColors = {};  // Цвета религий
 let raceColors = {};      // Цвета рас
 let resourceColors = {};  // Цвета ресурсов
 let tradeZoneColors = {}; // Цвета торговых зон
 
 // Слои для каждого типа карты
-const politicalLayer = L.layerGroup().addTo(map);  // Политическая (уже есть)
+const politicalLayer = L.layerGroup().addTo(map);  // Политическая (по умолчанию)
 const religionLayer = L.layerGroup();              // Религиозная
 const raceLayer = L.layerGroup();                  // Расовая
 const resourceLayer = L.layerGroup();             // Ресурсная
@@ -84,7 +74,7 @@ capitalMarker.on('dragend', e => {
 });
 
 // ───────────────────────────────
-// Загрузка CSV с данными провинций и цветов государств
+// Загрузка CSV с данными провинций и цветов
 Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.text())])
   .then(([csv1, csv2]) => {
     // Загрузка данных провинций (sheet1URL)
@@ -96,26 +86,21 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
         area: cols[1],
         name: cols[2],
         state: cols[3],
-        race: cols[4],       // Раса
-        religion: cols[5],   // Религия
+        race: cols[4],
+        religion: cols[5],
         population: cols[6],
-        resource: cols[7],   // Ресурс
-        tradeZone: cols[8]    // Торговая зона
+        resource: cols[7],
+        tradeZone: cols[8]
       };
     });
 
     // Загрузка цветов (sheet2URL)
     csv2.trim().split('\n').slice(1).forEach(rowStr => {
       const cols = rowStr.split(',');
-      // Государства
       if (cols[0] && cols[1]) countryColors[cols[0]] = '#' + cols[1];
-      // Религии (столбец G и H)
       if (cols[6] && cols[7]) religionColors[cols[6]] = '#' + cols[7];
-      // Расы (столбец D и E)
       if (cols[3] && cols[4]) raceColors[cols[3]] = '#' + cols[4];
-      // Ресурсы (столбец J и K)
       if (cols[9] && cols[10]) resourceColors[cols[9]] = '#' + cols[10];
-      // Торговые зоны (столбец M и N)
       if (cols[12] && cols[13]) tradeZoneColors[cols[12]] = '#' + cols[13];
     });
 
@@ -124,7 +109,7 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
     loadMarkers();
   });
 
-// Стиль для политической карты (уже есть)
+// Стиль для политической карты
 function politicalStyle(f) {
   const id = f.properties?.id;
   if (id && provinceData[id] && provinceData[id].state) {
@@ -260,13 +245,6 @@ function onEachProvince(feature, layer) {
     content = `ID: ${id}<br>Название провинции: ${info.name || 'Неизвестно'}<br>Раса: ${info.race || 'Неизвестно'}<br>Религия: ${info.religion || 'Неизвестно'}<br>Ресурс: ${info.resource || 'Неизвестно'}`;
   }
   layer.bindPopup(content, { autoPan: true, closeButton: true });
-
-  layer.on('click', e => {
-    resetHighlight(); // Сбрасываем подсветку всех провинций
-    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 }); // Подсвечиваем жёлтым
-    e.target.bringToFront();
-    layer.openPopup();
-  });
 }
 
 // ───────────────────────────────
@@ -309,10 +287,6 @@ function createLegend(type, colors) {
       item.appendChild(colorBox);
       item.appendChild(label);
       div.appendChild(item);
-
-      // Подсветка при наведении
-      item.addEventListener('mouseenter', () => highlightByType(type, name));
-      item.addEventListener('mouseleave', () => resetHighlight());
     }
     return div;
   };
@@ -320,47 +294,7 @@ function createLegend(type, colors) {
   map.legend = legend; // Сохраняем ссылку для удаления
 }
 
-// Подсветка провинций по типу (религия, раса и т.д.)
-function highlightByType(type, name) {
-  const currentLayer = getActiveLayer();
-  currentLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
-    if (id && provinceData[id] && provinceData[id][type] === name) {
-      l.setStyle({ fillOpacity: 0.8 });
-      l.bringToFront();
-    }
-  });
-}
-
-function resetHighlight() {
-  const currentLayer = getActiveLayer();
-  currentLayer.eachLayer(l => {
-    const id = l.feature?.properties?.id;
-    if (id && provinceData[id]) {
-      // Возвращаем стиль по умолчанию в зависимости от активного слоя
-      let styleFunc;
-      if (map.hasLayer(politicalLayer)) styleFunc = politicalStyle;
-      else if (map.hasLayer(religionLayer)) styleFunc = religionStyle;
-      else if (map.hasLayer(raceLayer)) styleFunc = raceStyle;
-      else if (map.hasLayer(resourceLayer)) styleFunc = resourceStyle;
-      else if (map.hasLayer(tradeZoneLayer)) styleFunc = tradeZoneStyle;
-      else styleFunc = politicalStyle;
-
-      l.setStyle(styleFunc(l.feature));
-    }
-  });
-}
-
-// Получение активного слоя
-function getActiveLayer() {
-  if (map.hasLayer(politicalLayer)) return politicalLayer;
-  if (map.hasLayer(religionLayer)) return religionLayer;
-  if (map.hasLayer(raceLayer)) return raceLayer;
-  if (map.hasLayer(resourceLayer)) return resourceLayer;
-  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
-  return politicalLayer;
-}
-
+// Контроллер слоёв
 function createLayerControl() {
   L.control.layers({
     'Политическая карта': politicalLayer,
@@ -383,11 +317,12 @@ function createLayerControl() {
 
 // ───────────────────────────────
 // Слой ID провинций
+let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
 function generateIdLabels() {
   idLayerGroup.clearLayers();
   const currentLayer = getActiveLayer();
   currentLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
+    const id = l.feature?.properties?.id;
     if (id) {
       const center = l.getBounds().getCenter();
       const icon = L.divIcon({ className: 'province-id-label', html: `<div style="font-size:18px; font-weight:bold; color:red; text-shadow:1px 1px 2px white;">${id}</div>`, iconSize: [30, 30] });
@@ -395,7 +330,6 @@ function generateIdLabels() {
     }
   });
 }
-
 function createIdToggleButton() {
   const toggle = L.control({ position: 'topleft' });
   toggle.onAdd = () => {
@@ -415,6 +349,16 @@ function createIdToggleButton() {
     return div;
   };
   toggle.addTo(map);
+}
+
+// Получение активного слоя
+function getActiveLayer() {
+  if (map.hasLayer(politicalLayer)) return politicalLayer;
+  if (map.hasLayer(religionLayer)) return religionLayer;
+  if (map.hasLayer(raceLayer)) return raceLayer;
+  if (map.hasLayer(resourceLayer)) return resourceLayer;
+  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
+  return politicalLayer;
 }
 
 // ───────────────────────────────
