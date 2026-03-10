@@ -39,6 +39,7 @@ let raceColors = {};      // Цвета рас
 let resourceColors = {};  // Цвета ресурсов
 let tradeZoneColors = {}; // Цвета торговых зон
 let selectedProvince = null;
+let searchHighlight = null;
 
 // Слои для каждого типа карты
 const politicalLayer = L.layerGroup().addTo(map);  // Политическая (по умолчанию)
@@ -242,6 +243,66 @@ function getActiveLayer() {
   if (map.hasLayer(resourceLayer)) return resourceLayer;
   if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
   return politicalLayer;
+}
+
+// Поиск по ID
+function searchProvinceById(id) {
+
+  const currentLayer = getActiveLayer();
+
+  // сброс предыдущего поиска
+  if (searchHighlight) {
+    searchHighlight.setStyle(searchHighlight.defaultStyle);
+    searchHighlight = null;
+  }
+
+  let found = false;
+
+  currentLayer.eachLayer(geoLayer => {
+
+    if (!geoLayer.eachLayer) return;
+
+    geoLayer.eachLayer(province => {
+
+      const provinceId = province.feature?.properties?.id;
+
+      if (provinceId == id) {
+
+        searchHighlight = province;
+
+        province.setStyle({
+          color: '#ff0000',
+          weight: 3,
+          fillOpacity: province.options.fillOpacity
+        });
+
+        province.bringToFront();
+
+        const bounds = province.getBounds();
+        map.fitBounds(bounds, { maxZoom: -1 });
+
+        found = true;
+      }
+
+    });
+
+  });
+
+  if (!found) {
+    alert("Провинция с таким ID не найдена");
+  }
+
+}
+
+function searchProvince() {
+
+  const input = document.getElementById("provinceSearch");
+  const id = input.value.trim();
+
+  if (!id) return;
+
+  searchProvinceById(id);
+
 }
 
 // Функция для popup и клика по провинции
