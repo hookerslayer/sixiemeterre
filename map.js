@@ -256,6 +256,34 @@ function onEachProvince(feature, layer) {
   });
 }
 
+// Сброс подсветки всех провинций
+function resetHighlight() {
+  // Получаем активный слой
+  const currentLayer = getActiveLayer();
+  // Сбрасываем стиль для всех провинций в активном слое
+  currentLayer.eachLayer(layer => {
+    const id = layer.feature?.properties?.id;
+    if (id && provinceData[id]) {
+      const color = countryColors[provinceData[id].state];
+      if (color) {
+        layer.setStyle({ fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 });
+      } else {
+        layer.setStyle({ fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 });
+      }
+    }
+  });
+}
+
+// Получение активного слоя
+function getActiveLayer() {
+  if (map.hasLayer(politicalLayer)) return politicalLayer;
+  if (map.hasLayer(religionLayer)) return religionLayer;
+  if (map.hasLayer(raceLayer)) return raceLayer;
+  if (map.hasLayer(resourceLayer)) return resourceLayer;
+  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
+  return politicalLayer;
+}
+
 // ───────────────────────────────
 // Легенда
 function createLegend(type, colors) {
