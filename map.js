@@ -134,7 +134,7 @@ function onEachProvince(feature, layer) {
   const info = provinceData[id];
   let content = `ID: ${id}`;
   if (info) {
-    content = `ID: ${id}<br>Площадь, км2: ${info.area}<br>Название провинции: ${info.name}<br>Государство: ${info.state}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Население: ${info.population}<br>Ресурс: ${info.resource}`;
+    content = `ID: ${id}<br>Название провинции: ${info.name}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Ресурс: ${info.resource}`;
   }
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
@@ -260,3 +260,4 @@ function loadMarkers() {
     'Отслеживание координат': coordinateTrackingLayer
   }).addTo(map);
 }
+
