@@ -327,9 +327,9 @@ function highlightByType(type, name) {
 function resetHighlight() {
   const currentLayer = getActiveLayer();
   currentLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
+    const id = l.feature?.properties?.id;
     if (id && provinceData[id]) {
-      // Определяем, какой стиль применить в зависимости от активного слоя
+      // Возвращаем стиль по умолчанию в зависимости от активного слоя
       let styleFunc;
       if (map.hasLayer(politicalLayer)) styleFunc = politicalStyle;
       else if (map.hasLayer(religionLayer)) styleFunc = religionStyle;
