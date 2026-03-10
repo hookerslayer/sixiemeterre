@@ -38,7 +38,7 @@ let religionColors = {};  // Цвета религий
 let raceColors = {};      // Цвета рас
 let resourceColors = {};  // Цвета ресурсов
 let tradeZoneColors = {}; // Цвета торговых зон
-let provincesLayer;
+let selectedProvince = null;
 
 // Слои для каждого типа карты
 const politicalLayer = L.layerGroup().addTo(map);  // Политическая (по умолчанию)
@@ -251,24 +251,48 @@ function onEachProvince(feature, layer) {
 
   const info = provinceData[id];
   let content = `ID: ${id}`;
+
   if (info) {
-    content = `ID: ${id}<br>Название провинции: ${info.name}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Ресурс: ${info.resource}`;
+    content = `ID: ${id}<br>
+               Название провинции: ${info.name}<br>
+               Раса: ${info.race}<br>
+               Религия: ${info.religion}<br>
+               Ресурс: ${info.resource}`;
   }
+
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
-layer.on('click', e => {
-  const activeLayer = getActiveLayer();
-  if (activeLayer && activeLayer.resetStyle) activeLayer.resetStyle();
+  layer.on('click', e => {
 
-  e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
-  e.target.bringToFront();
-  layer.openPopup();
-});
+    const activeLayer = getActiveLayer();
 
-layer.on('popupclose', () => {
-  const activeLayer = getActiveLayer();
-  if (activeLayer && activeLayer.resetStyle) activeLayer.resetStyle();
-});
+    // Сброс подсветки предыдущей провинции
+    if (selectedProvince && activeLayer) {
+      activeLayer.resetStyle(selectedProvince);
+    }
+
+    // Сохраняем текущую провинцию
+    selectedProvince = e.target;
+
+    // Подсветка
+    selectedProvince.setStyle({
+      fillColor: '#ffff99',
+      fillOpacity: 0.6,
+      color: '#000',
+      weight: 0
+    });
+
+    selectedProvince.bringToFront();
+    selectedProvince.openPopup();
+  });
+
+  layer.on('popupclose', () => {
+    const activeLayer = getActiveLayer();
+    if (selectedProvince && activeLayer) {
+      activeLayer.resetStyle(selectedProvince);
+      selectedProvince = null;
+    }
+  });
 }
 
 // ───────────────────────────────
