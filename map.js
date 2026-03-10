@@ -24,6 +24,8 @@ const offsetX = 1027.5;
 const offsetY = 1027.5;
 const angle = Math.PI / 2;
 
+map.legend = null;
+
 // ───────────────────────────────
 // Google Sheets CSV ссылки
 const sheet1URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?gid=0&single=true&output=csv';
@@ -117,7 +119,7 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
 // Стиль для политической карты (уже есть)
 function politicalStyle(f) {
   const id = f.properties?.id;
-  if (id && provinceData[id]) {
+  if (id && provinceData[id] && provinceData[id].state) {
     const color = countryColors[provinceData[id].state];
     if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
   }
@@ -127,7 +129,7 @@ function politicalStyle(f) {
 // Стиль для религиозной карты
 function religionStyle(f) {
   const id = f.properties?.id;
-  if (id && provinceData[id]) {
+  if (id && provinceData[id] && provinceData[id].religion) {
     const color = religionColors[provinceData[id].religion];
     if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
   }
@@ -137,7 +139,7 @@ function religionStyle(f) {
 // Стиль для расовой карты
 function raceStyle(f) {
   const id = f.properties?.id;
-  if (id && provinceData[id]) {
+  if (id && provinceData[id] && provinceData[id].race) {
     const color = raceColors[provinceData[id].race];
     if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
   }
@@ -147,7 +149,7 @@ function raceStyle(f) {
 // Стиль для ресурсной карты
 function resourceStyle(f) {
   const id = f.properties?.id;
-  if (id && provinceData[id]) {
+  if (id && provinceData[id] && provinceData[id].resource) {
     const color = resourceColors[provinceData[id].resource];
     if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
   }
@@ -157,7 +159,7 @@ function resourceStyle(f) {
 // Стиль для торговых зон
 function tradeZoneStyle(f) {
   const id = f.properties?.id;
-  if (id && provinceData[id]) {
+  if (id && provinceData[id] && provinceData[id].tradeZone) {
     const color = tradeZoneColors[provinceData[id].tradeZone];
     if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
   }
@@ -233,6 +235,7 @@ function loadGeoJSON() {
       // Создание легенд и контроллера слоёв
       createLegend('state', countryColors); // Политическая (по умолчанию)
       createLayerControl();
+      createIdToggleButton();
     })
     .catch(err => { console.error(err); alert(err); });
 }
@@ -246,36 +249,20 @@ function onEachProvince(feature, layer) {
   const info = provinceData[id];
   let content = `ID: ${id}`;
   if (info) {
-    content = `ID: ${id}<br>Название провинции: ${info.name}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Ресурс: ${info.resource}`;
+    content = `ID: ${id}<br>Название провинции: ${info.name || 'Неизвестно'}<br>Раса: ${info.race || 'Неизвестно'}<br>Религия: ${info.religion || 'Неизвестно'}<br>Ресурс: ${info.resource || 'Неизвестно'}`;
   }
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', e => {
-    provincesLayer.resetStyle();
     e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
     e.target.bringToFront();
     layer.openPopup();
   });
-  layer.on('popupclose', () => provincesLayer.resetStyle());
+  layer.on('popupclose', () => resetHighlight());
 }
 
 // ───────────────────────────────
 // Легенда
-function highlightState(state) {
-  provincesLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
-    if (id && provinceData[id] && provinceData[id].state === state) { l.setStyle({ fillOpacity: 0.8 }); l.bringToFront(); }
-  });
-}
-function resetHighlight() {
-  provincesLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
-    if (id && provinceData[id]) {
-      const color = countryColors[provinceData[id].state];
-      if (color) l.setStyle({ fillOpacity: 0.5 }); else l.setStyle({ fillOpacity: 0 });
-    }
-  });
-}
 function createLegend(type, colors) {
   // Удалить старую легенду, если она есть
   if (map.legend) map.removeControl(map.legend);
@@ -294,6 +281,7 @@ function createLegend(type, colors) {
                      type === 'resource' ? 'Ресурсы' : 'Торговые зоны'}</b><br>`;
 
     for (const [name, color] of Object.entries(colors)) {
+      if (!name || !color) continue;
       const item = document.createElement('div');
       item.style.display = 'flex';
       item.style.alignItems = 'center';
@@ -316,7 +304,7 @@ function createLegend(type, colors) {
 
       // Подсветка при наведении
       item.addEventListener('mouseenter', () => highlightByType(type, name));
-      item.addEventListener('mouseleave', resetHighlight);
+      item.addEventListener('mouseleave', () => resetHighlight());
     }
     return div;
   };
@@ -378,7 +366,8 @@ function createLayerControl() {
 // Слой ID провинций
 function generateIdLabels() {
   idLayerGroup.clearLayers();
-  provincesLayer.eachLayer(l => {
+  const currentLayer = getActiveLayer();
+  currentLayer.eachLayer(l => {
     const id = l.feature.properties?.id;
     if (id) {
       const center = l.getBounds().getCenter();
@@ -439,5 +428,3 @@ function loadMarkers() {
     'Отслеживание координат': coordinateTrackingLayer
   }).addTo(map);
 }
-
-
