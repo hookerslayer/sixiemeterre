@@ -38,6 +38,7 @@ let religionColors = {};  // Цвета религий
 let raceColors = {};      // Цвета рас
 let resourceColors = {};  // Цвета ресурсов
 let tradeZoneColors = {}; // Цвета торговых зон
+let provincesLayer;
 
 // Слои для каждого типа карты
 const politicalLayer = L.layerGroup().addTo(map);  // Политическая (по умолчанию)
@@ -233,56 +234,7 @@ function loadGeoJSON() {
     .catch(err => { console.error(err); alert(err); });
 }
 
-// ───────────────────────────────
-// Функция для popup и клика по провинции
-function onEachProvince(feature, layer) {
-  const id = feature.properties?.id;
-  if (!id) return;
-
-  const info = provinceData[id];
-  let content = `ID: ${id}`;
-  if (info) {
-    content = `ID: ${id}<br>Название провинции: ${info.name || 'Неизвестно'}<br>Раса: ${info.race || 'Неизвестно'}<br>Религия: ${info.religion || 'Неизвестно'}<br>Ресурс: ${info.resource || 'Неизвестно'}`;
-  }
-  layer.bindPopup(content, { autoPan: true, closeButton: true });
-
-  layer.on('click', e => {
-    // Используем функцию для сброса стилей всех провинций
-    resetHighlight();
-    // Подсвечиваем выбранную провинцию
-    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
-    e.target.bringToFront();
-    layer.openPopup();
-  });
-}
-
-// Сброс подсветки всех провинций
-function resetHighlight() {
-  // Получаем активный слой
-  const currentLayer = getActiveLayer();
-  // Сбрасываем стиль для всех провинций в активном слое
-  currentLayer.eachLayer(layer => {
-    const id = layer.feature?.properties?.id;
-    if (id && provinceData[id]) {
-      const color = countryColors[provinceData[id].state];
-      if (color) {
-        layer.setStyle({ fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 });
-      } else {
-        layer.setStyle({ fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 });
-      }
-    }
-  });
-}
-
-// Получение активного слоя
-function getActiveLayer() {
-  if (map.hasLayer(politicalLayer)) return politicalLayer;
-  if (map.hasLayer(religionLayer)) return religionLayer;
-  if (map.hasLayer(raceLayer)) return raceLayer;
-  if (map.hasLayer(resourceLayer)) return resourceLayer;
-  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
-  return politicalLayer;
-}
+//---
 
 // ───────────────────────────────
 // Легенда
