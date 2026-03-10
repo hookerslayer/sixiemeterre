@@ -373,16 +373,39 @@ function createLayerControl() {
 // Слой ID провинций
 let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
 function generateIdLabels() {
+
   idLayerGroup.clearLayers();
+
   const currentLayer = getActiveLayer();
-  currentLayer.eachLayer(l => {
-    const id = l.feature?.properties?.id;
-    if (id) {
-      const center = l.getBounds().getCenter();
-      const icon = L.divIcon({ className: 'province-id-label', html: `<div style="font-size:18px; font-weight:bold; color:red; text-shadow:1px 1px 2px white;">${id}</div>`, iconSize: [30, 30] });
+
+  currentLayer.eachLayer(geoLayer => {
+
+    if (!geoLayer.eachLayer) return;
+
+    geoLayer.eachLayer(province => {
+
+      const id = province.feature?.properties?.id;
+      if (!id) return;
+
+      const center = province.getBounds().getCenter();
+
+      const icon = L.divIcon({
+        className: 'province-id-label',
+        html: `<div style="
+          font-size:18px;
+          font-weight:bold;
+          color:red;
+          text-shadow:1px 1px 2px white;
+        ">${id}</div>`,
+        iconSize: [30, 30]
+      });
+
       L.marker(center, { icon }).addTo(idLayerGroup);
-    }
+
+    });
+
   });
+
 }
 function createIdToggleButton() {
   const toggle = L.control({ position: 'topleft' });
