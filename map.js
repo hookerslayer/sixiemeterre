@@ -100,11 +100,13 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
     // Загрузка цветов (sheet2URL)
     csv2.trim().split('\n').slice(1).forEach(rowStr => {
       const cols = rowStr.split(',');
-      if (cols[0] && cols[1]) countryColors[cols[0]] = '#' + cols[1];
+      const state = cols[0]?.trim();
+      const color = cols[1]?.trim();
       if (cols[6] && cols[7]) religionColors[cols[6]] = '#' + cols[7];
       if (cols[3] && cols[4]) raceColors[cols[3]] = '#' + cols[4];
       if (cols[9] && cols[10]) resourceColors[cols[9]] = '#' + cols[10];
       if (cols[12] && cols[13]) tradeZoneColors[cols[12]] = '#' + cols[13];
+      if (state && color) {countryColors[state] = '#' + color;}
     });
 
     // Загрузка GeoJSON и создание слоёв
