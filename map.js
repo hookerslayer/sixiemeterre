@@ -92,7 +92,8 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
         religion: cols[5],
         population: cols[6],
         resource: cols[7],
-        tradeZone: cols[8]
+        tradeZone: cols[8],
+        occupation: cols[18]
       };
     });
 
@@ -111,14 +112,79 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
     loadMarkers();
   });
 
+let occupationPatterns = {};
+
+function getOccupationPattern(stateName) {
+
+  if (!stateName) return null;
+
+  if (occupationPatterns[stateName]) {
+    return occupationPatterns[stateName];
+  }
+
+  const color = countryColors[stateName];
+  if (!color) return null;
+
+  const pattern = new L.StripePattern({
+    weight: 3,
+    spaceWeight: 4,
+    color: color,
+    opacity: 0.8,
+    angle: 45
+  });
+
+  pattern.addTo(map);
+
+  occupationPatterns[stateName] = pattern;
+
+  return pattern;
+}
+
 // Стиль для политической карты
 function politicalStyle(f) {
+
   const id = f.properties?.id;
-  if (id && provinceData[id] && provinceData[id].state) {
-    const color = countryColors[provinceData[id].state];
-    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
+
+  if (id && provinceData[id]) {
+
+    const province = provinceData[id];
+
+    let style = {
+      fillOpacity: 0,
+      color: '#000',
+      weight: 1.5,
+      opacity: 0
+    };
+
+    if (province.state) {
+
+      const baseColor = countryColors[province.state];
+
+      if (baseColor) {
+        style.fillColor = baseColor;
+        style.fillOpacity = 0.5;
+        style.color = '#000';
+        style.weight = 0;
+      }
+
+    }
+
+    // Проверка оккупации
+    if (province.occupation) {
+
+      const pattern = getOccupationPattern(province.occupation);
+
+      if (pattern) {
+        style.fillPattern = pattern;
+      }
+
+    }
+
+    return style;
   }
+
   return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
+
 }
 
 // Стиль для религиозной карты
