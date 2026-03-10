@@ -234,7 +234,36 @@ function loadGeoJSON() {
     .catch(err => { console.error(err); alert(err); });
 }
 
-//---
+// Получение активного слоя
+function getActiveLayer() {
+  if (map.hasLayer(politicalLayer)) return politicalLayer;
+  if (map.hasLayer(religionLayer)) return religionLayer;
+  if (map.hasLayer(raceLayer)) return raceLayer;
+  if (map.hasLayer(resourceLayer)) return resourceLayer;
+  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
+  return politicalLayer;
+}
+
+// Функция для popup и клика по провинции
+function onEachProvince(feature, layer) {
+  const id = feature.properties?.id;
+  if (!id) return;
+
+  const info = provinceData[id];
+  let content = `ID: ${id}`;
+  if (info) {
+    content = `ID: ${id}<br>Название провинции: ${info.name}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Ресурс: ${info.resource}`;
+  }
+  layer.bindPopup(content, { autoPan: true, closeButton: true });
+
+  layer.on('click', e => {
+    getActiveLayer.resetStyle();
+    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
+    e.target.bringToFront();
+    layer.openPopup();
+  });
+  layer.on('popupclose', () => getActiveLayer.resetStyle());
+}
 
 // ───────────────────────────────
 // Легенда
@@ -338,16 +367,6 @@ function createIdToggleButton() {
     return div;
   };
   toggle.addTo(map);
-}
-
-// Получение активного слоя
-function getActiveLayer() {
-  if (map.hasLayer(politicalLayer)) return politicalLayer;
-  if (map.hasLayer(religionLayer)) return religionLayer;
-  if (map.hasLayer(raceLayer)) return raceLayer;
-  if (map.hasLayer(resourceLayer)) return resourceLayer;
-  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
-  return politicalLayer;
 }
 
 // ───────────────────────────────
