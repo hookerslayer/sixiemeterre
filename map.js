@@ -229,8 +229,84 @@ function loadGeoJSON() {
       createLegend('state', countryColors); // Политическая (по умолчанию)
       createLayerControl();
       createIdToggleButton();
+      searchProvinceById();
     })
     .catch(err => { console.error(err); alert(err); });
+}
+
+// Функция поиска провинции по ID
+function searchProvinceById() {
+  // Создаём элемент для строки поиска
+  const searchControl = L.control({ position: 'topright' });
+  searchControl.onAdd = () => {
+    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-search');
+    div.innerHTML = `
+      <input
+        type="text"
+        id="province-search"
+        placeholder="Поиск по ID..."
+        style="
+          width: 150px;
+          padding: 5px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 12px;
+        "
+      />
+      <button
+        id="search-button"
+        style="
+          margin-left: 5px;
+          padding: 5px 10px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          background: white;
+          cursor: pointer;
+          font-size: 12px;
+        "
+      >
+        Найти
+      </button>
+    `;
+
+    // Обработчик нажатия на кнопку "Найти"
+    div.querySelector('#search-button').addEventListener('click', () => {
+      const searchId = div.querySelector('#province-search').value.trim();
+      if (!searchId) return;
+
+      // Ищем провинцию по ID
+      let foundLayer = null;
+      const currentLayer = getActiveLayer();
+      currentLayer.eachLayer(layer => {
+        const id = layer.feature?.properties?.id;
+        if (id && id.toString() === searchId) {
+          foundLayer = layer;
+        }
+      });
+
+      if (foundLayer) {
+        // Центрируем карту на найденной провинции
+        map.fitBounds(foundLayer.getBounds());
+        // Открываем popup
+        foundLayer.openPopup();
+        // Подсвечиваем провинцию (опционально)
+        foundLayer.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
+        foundLayer.bringToFront();
+      } else {
+        alert(`Провинция с ID ${searchId} не найдена!`);
+      }
+    });
+
+    // Обработчик нажатия Enter в поле ввода
+    div.querySelector('#province-search').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        div.querySelector('#search-button').click();
+      }
+    });
+
+    return div;
+  };
+  searchControl.addTo(map);
 }
 
 // ───────────────────────────────
