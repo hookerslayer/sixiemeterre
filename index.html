@@ -10,8 +10,26 @@
   <link rel="icon" href="favicon.ico" type="image/ico">
 </head>
 <body>
-  <div id="map"></div>
+  <div id="provinceSearchBox" style="
+position:absolute;
+top:10px;
+left:60px;
+z-index:1000;
+background:white;
+padding:6px;
+border:1px solid #ccc;
+">
 
+<input id="provinceSearch"
+       type="text"
+       placeholder="ID провинции"
+       style="width:100px">
+
+<button onclick="searchProvince()">
+Поиск
+</button>
+</div>
+  <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="leaflet.icon-material.js"></script>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -19,3 +37,4 @@
   <script src="map.js"></script>
 </body>
 </html>
+
