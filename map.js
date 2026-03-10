@@ -20,6 +20,14 @@ L.imageOverlay('karta.png', imageBounds, {
 
 map.fitBounds(imageBounds);
 
+map.on('click', e => {
+  // Если клик не по провинции — просто закрываем popup и сбрасываем подсветку
+  if (!e.target || !e.target.feature) {
+    map.closePopup();
+    resetHighlight();
+  }
+});
+
 const offsetX = 1027.5;
 const offsetY = 1027.5;
 const angle = Math.PI / 2;
@@ -238,15 +246,52 @@ function highlightState(state) {
   });
 }
 
-// Сброс подсветки
 function resetHighlight() {
-  provincesLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
+  const currentLayer = getActiveLayer();
+  currentLayer.eachLayer(l => {
+    const id = l.feature?.properties?.id;
     if (id && provinceData[id]) {
-      const color = countryColors[provinceData[id].state];
-      if (color) l.setStyle({ fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 });
-      else l.setStyle({ fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 });
+      // Возвращаем стиль по умолчанию в зависимости от активного слоя
+      let styleFunc;
+      if (map.hasLayer(politicalLayer)) styleFunc = politicalStyle;
+      else if (map.hasLayer(religionLayer)) styleFunc = religionStyle;
+      else if (map.hasLayer(raceLayer)) styleFunc = raceStyle;
+      else if (map.hasLayer(resourceLayer)) styleFunc = resourceStyle;
+      else if (map.hasLayer(tradeZoneLayer)) styleFunc = tradeZoneStyle;
+      else styleFunc = politicalStyle;
+
+      l.setStyle(styleFunc(l.feature));
     }
+  });
+}
+
+// Получение активного слоя
+function getActiveLayer() {
+  if (map.hasLayer(politicalLayer)) return politicalLayer;
+  if (map.hasLayer(religionLayer)) return religionLayer;
+  if (map.hasLayer(raceLayer)) return raceLayer;
+  if (map.hasLayer(resourceLayer)) return resourceLayer;
+  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
+  return politicalLayer;
+}
+
+function createLayerControl() {
+  L.control.layers({
+    'Политическая карта': politicalLayer,
+    'Религиозная карта': religionLayer,
+    'Расовая карта': raceLayer,
+    'Ресурсная карта': resourceLayer,
+    'Торговые зоны': tradeZoneLayer
+  }, null, { position: 'topleft' }).addTo(map);
+
+  // События при переключении слоёв
+  map.on('baselayerchange', e => {
+    const layerName = e.name;
+    if (layerName === 'Политическая карта') createLegend('state', countryColors);
+    if (layerName === 'Религиозная карта') createLegend('religion', religionColors);
+    if (layerName === 'Расовая карта') createLegend('race', raceColors);
+    if (layerName === 'Ресурсная карта') createLegend('resource', resourceColors);
+    if (layerName === 'Торговые зоны') createLegend('tradeZone', tradeZoneColors);
   });
 }
 
@@ -263,6 +308,7 @@ function generateIdLabels() {
     }
   });
 }
+
 function createIdToggleButton() {
   const toggle = L.control({ position: 'topleft' });
   toggle.onAdd = () => {
