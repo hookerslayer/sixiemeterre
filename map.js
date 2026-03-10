@@ -336,23 +336,30 @@ function onEachProvince(feature, layer) {
 
   layer.on('click', e => {
 
-    // сброс предыдущей подсветки
-    if (selectedProvince) {
-      selectedProvince.setStyle(selectedProvince.defaultStyle);
-    }
+  // сброс подсветки найденной провинции
+  if (searchHighlight) {
+    searchHighlight.setStyle(searchHighlight.defaultStyle);
+    searchHighlight = null;
+  }
 
-    selectedProvince = e.target;
+  // сброс предыдущей подсветки кликом
+  if (selectedProvince) {
+    selectedProvince.setStyle(selectedProvince.defaultStyle);
+  }
 
-    selectedProvince.setStyle({
-      fillColor: '#ffff99',
-      fillOpacity: 0.6,
-      color: '#000',
-      weight: 0
-    });
+  selectedProvince = e.target;
 
-    selectedProvince.bringToFront();
-    selectedProvince.openPopup();
+  selectedProvince.setStyle({
+    fillColor: '#ffff99',
+    fillOpacity: 0.6,
+    color: '#000',
+    weight: 0
   });
+
+  selectedProvince.bringToFront();
+  selectedProvince.openPopup();
+
+});
 
   layer.on('popupclose', () => {
     if (selectedProvince) {
