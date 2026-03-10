@@ -311,16 +311,6 @@ function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
   if (!id) return;
 
-  // Запоминаем исходный стиль каждой провинции
-  layer.defaultStyle = layer.options.style ? layer.options.style(layer.feature) : {
-    fillOpacity: 0,
-    color: '#000',
-    weight: 1.5,
-    opacity: 0
-  };
-  layer.setStyle(layer.defaultStyle);
-
-  // Создаем popup
   const info = provinceData[id];
   let content = `ID: ${id}`;
   if (info) {
@@ -328,37 +318,37 @@ function onEachProvince(feature, layer) {
   }
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
-  // Обработчик клика по провинции
   layer.on('click', e => {
-    // Сброс подсветки предыдущей выбранной провинции
-    if (selectedProvince) {
-      selectedProvince.setStyle(selectedProvince.defaultStyle);
-    }
-    // Сброс подсветки поиска
-    if (searchHighlight) {
-      searchHighlight.setStyle(searchHighlight.defaultStyle);
-      searchHighlight = null;
-    }
+    // Сброс стиля у всех провинций группы
+    const activeLayer = getActiveLayer();
+    activeLayer.eachLayer(l => {
+      const lid = l.feature?.properties?.id;
+      if (!lid) return;
 
-    // Подсветка текущей кликом
-    e.target.setStyle({
-      fillColor: '#ffff99',
-      fillOpacity: 0.6,
-      color: '#000',
-      weight: 0
+      // Сброс стиля для всех, кроме кликнутой
+      if (lid === id) return; // кликнутая будет подсвечена ниже
+      if (activeLayer.resetStyle) activeLayer.resetStyle(l);
     });
-    e.target.bringToFront();
-    e.target.openPopup();
 
-    selectedProvince = e.target;
+    // Подсветка всех провинций с этим ID
+    activeLayer.eachLayer(l => {
+      if (l.feature?.properties?.id === id) {
+        l.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#ff0000', weight: 2 });
+        l.bringToFront();
+      }
+    });
+
+    layer.openPopup();
   });
 
-  // Сброс подсветки при закрытии popup (если нужно)
   layer.on('popupclose', () => {
-    if (selectedProvince) {
-      selectedProvince.setStyle(selectedProvince.defaultStyle);
-      selectedProvince = null;
-    }
+    // Сброс стиля для всех провинций группы при закрытии popup
+    const activeLayer = getActiveLayer();
+    activeLayer.eachLayer(l => {
+      if (l.feature?.properties?.id === id && activeLayer.resetStyle) {
+        activeLayer.resetStyle(l);
+      }
+    });
   });
 }
 
