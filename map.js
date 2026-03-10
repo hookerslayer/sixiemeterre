@@ -44,17 +44,9 @@ let provinceData = {};
 let countryColors = {};
 let provincesLayer;
 let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
-let religionColors = {};  // Цвета религий
-let raceColors = {};      // Цвета рас
-let resourceColors = {};  // Цвета ресурсов
-let tradeZoneColors = {}; // Цвета торговых зон
 
 // Слои для каждого типа карты
 const politicalLayer = L.layerGroup().addTo(map);  // Политическая (уже есть)
-const religionLayer = L.layerGroup();              // Религиозная
-const raceLayer = L.layerGroup();                  // Расовая
-const resourceLayer = L.layerGroup();             // Ресурсная
-const tradeZoneLayer = L.layerGroup();             // Торговые зоны
 
 // ───────────────────────────────
 // Иконки для маркеров
@@ -109,14 +101,6 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
       const cols = rowStr.split(',');
       // Государства
       if (cols[0] && cols[1]) countryColors[cols[0]] = '#' + cols[1];
-      // Религии (столбец G и H)
-      if (cols[6] && cols[7]) religionColors[cols[6]] = '#' + cols[7];
-      // Расы (столбец D и E)
-      if (cols[3] && cols[4]) raceColors[cols[3]] = '#' + cols[4];
-      // Ресурсы (столбец J и K)
-      if (cols[9] && cols[10]) resourceColors[cols[9]] = '#' + cols[10];
-      // Торговые зоны (столбец M и N)
-      if (cols[12] && cols[13]) tradeZoneColors[cols[12]] = '#' + cols[13];
     });
 
     // Загрузка GeoJSON и создание слоёв
@@ -129,46 +113,6 @@ function politicalStyle(f) {
   const id = f.properties?.id;
   if (id && provinceData[id] && provinceData[id].state) {
     const color = countryColors[provinceData[id].state];
-    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
-  }
-  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
-}
-
-// Стиль для религиозной карты
-function religionStyle(f) {
-  const id = f.properties?.id;
-  if (id && provinceData[id] && provinceData[id].religion) {
-    const color = religionColors[provinceData[id].religion];
-    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
-  }
-  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
-}
-
-// Стиль для расовой карты
-function raceStyle(f) {
-  const id = f.properties?.id;
-  if (id && provinceData[id] && provinceData[id].race) {
-    const color = raceColors[provinceData[id].race];
-    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
-  }
-  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
-}
-
-// Стиль для ресурсной карты
-function resourceStyle(f) {
-  const id = f.properties?.id;
-  if (id && provinceData[id] && provinceData[id].resource) {
-    const color = resourceColors[provinceData[id].resource];
-    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
-  }
-  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
-}
-
-// Стиль для торговых зон
-function tradeZoneStyle(f) {
-  const id = f.properties?.id;
-  if (id && provinceData[id] && provinceData[id].tradeZone) {
-    const color = tradeZoneColors[provinceData[id].tradeZone];
     if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
   }
   return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
@@ -201,48 +145,15 @@ function loadGeoJSON() {
       }));
 
       // Политическая карта
-      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
+      provincesLayer = L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
         style: politicalStyle,
         onEachFeature: onEachProvince,
         smoothFactor: 0,
         noClip: true
       }).addTo(politicalLayer);
 
-      // Религиозная карта
-      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
-        style: religionStyle,
-        onEachFeature: onEachProvince,
-        smoothFactor: 0,
-        noClip: true
-      }).addTo(religionLayer);
-
-      // Расовая карта
-      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
-        style: raceStyle,
-        onEachFeature: onEachProvince,
-        smoothFactor: 0,
-        noClip: true
-      }).addTo(raceLayer);
-
-      // Ресурсная карта
-      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
-        style: resourceStyle,
-        onEachFeature: onEachProvince,
-        smoothFactor: 0,
-        noClip: true
-      }).addTo(resourceLayer);
-
-      // Торговые зоны
-      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
-        style: tradeZoneStyle,
-        onEachFeature: onEachProvince,
-        smoothFactor: 0,
-        noClip: true
-      }).addTo(tradeZoneLayer);
-
-      // Создание легенд и контроллера слоёв
-      createLegend('state', countryColors); // Политическая (по умолчанию)
-      createLayerControl();
+      // Создание легенд
+      createLegend();
       createIdToggleButton();
     })
     .catch(err => { console.error(err); alert(err); });
@@ -271,7 +182,7 @@ function onEachProvince(feature, layer) {
 
 // ───────────────────────────────
 // Легенда
-function createLegend(type, colors) {
+function createLegend() {
   // Удалить старую легенду, если она есть
   if (map.legend) map.removeControl(map.legend);
 
@@ -283,13 +194,9 @@ function createLegend(type, colors) {
     div.style.border = '1px solid #ccc';
     div.style.maxHeight = '400px';
     div.style.overflowY = 'auto';
-    div.innerHTML = `<b>${type === 'state' ? 'Государства' :
-                     type === 'religion' ? 'Религии' :
-                     type === 'race' ? 'Расы' :
-                     type === 'resource' ? 'Ресурсы' : 'Торговые зоны'}</b><br>`;
+    div.innerHTML = '<b>Государства</b><br>';
 
-    for (const [name, color] of Object.entries(colors)) {
-      if (!name || !color) continue;
+    for (const [state, color] of Object.entries(countryColors)) {
       const item = document.createElement('div');
       item.style.display = 'flex';
       item.style.alignItems = 'center';
@@ -304,14 +211,14 @@ function createLegend(type, colors) {
       colorBox.style.border = '1px solid #000';
 
       const label = document.createElement('span');
-      label.textContent = name;
+      label.textContent = state;
 
       item.appendChild(colorBox);
       item.appendChild(label);
       div.appendChild(item);
 
       // Подсветка при наведении
-      item.addEventListener('mouseenter', () => highlightByType(type, name));
+      item.addEventListener('mouseenter', () => highlightState(state));
       item.addEventListener('mouseleave', () => resetHighlight());
     }
     return div;
@@ -320,12 +227,11 @@ function createLegend(type, colors) {
   map.legend = legend; // Сохраняем ссылку для удаления
 }
 
-// Подсветка провинций по типу (религия, раса и т.д.)
-function highlightByType(type, name) {
-  const currentLayer = getActiveLayer();
-  currentLayer.eachLayer(l => {
-    const id = l.feature?.properties?.id;
-    if (id && provinceData[id] && provinceData[id][type] === name) {
+// Подсветка провинций по государству
+function highlightState(state) {
+  provincesLayer.eachLayer(l => {
+    const id = l.feature.properties?.id;
+    if (id && provinceData[id] && provinceData[id].state === state) {
       l.setStyle({ fillOpacity: 0.8 });
       l.bringToFront();
     }
@@ -334,51 +240,13 @@ function highlightByType(type, name) {
 
 // Сброс подсветки
 function resetHighlight() {
-  const currentLayer = getActiveLayer();
-  currentLayer.eachLayer(l => {
-    const id = l.feature?.properties?.id;
+  provincesLayer.eachLayer(l => {
+    const id = l.feature.properties?.id;
     if (id && provinceData[id]) {
-      // Определяем, какой стиль применить в зависимости от активного слоя
-      let styleFunc;
-      if (map.hasLayer(politicalLayer)) styleFunc = politicalStyle;
-      else if (map.hasLayer(religionLayer)) styleFunc = religionStyle;
-      else if (map.hasLayer(raceLayer)) styleFunc = raceStyle;
-      else if (map.hasLayer(resourceLayer)) styleFunc = resourceStyle;
-      else if (map.hasLayer(tradeZoneLayer)) styleFunc = tradeZoneStyle;
-      else styleFunc = politicalStyle;
-
-      l.setStyle(styleFunc(l.feature));
+      const color = countryColors[provinceData[id].state];
+      if (color) l.setStyle({ fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 });
+      else l.setStyle({ fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 });
     }
-  });
-}
-
-// Получение активного слоя
-function getActiveLayer() {
-  if (map.hasLayer(politicalLayer)) return politicalLayer;
-  if (map.hasLayer(religionLayer)) return religionLayer;
-  if (map.hasLayer(raceLayer)) return raceLayer;
-  if (map.hasLayer(resourceLayer)) return resourceLayer;
-  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
-  return politicalLayer;
-}
-
-function createLayerControl() {
-  L.control.layers({
-    'Политическая карта': politicalLayer,
-    'Религиозная карта': religionLayer,
-    'Расовая карта': raceLayer,
-    'Ресурсная карта': resourceLayer,
-    'Торговые зоны': tradeZoneLayer
-  }, null, { position: 'topleft' }).addTo(map);
-
-  // События при переключении слоёв
-  map.on('baselayerchange', e => {
-    const layerName = e.name;
-    if (layerName === 'Политическая карта') createLegend('state', countryColors);
-    if (layerName === 'Религиозная карта') createLegend('religion', religionColors);
-    if (layerName === 'Расовая карта') createLegend('race', raceColors);
-    if (layerName === 'Ресурсная карта') createLegend('resource', resourceColors);
-    if (layerName === 'Торговые зоны') createLegend('tradeZone', tradeZoneColors);
   });
 }
 
@@ -386,9 +254,8 @@ function createLayerControl() {
 // Слой ID провинций
 function generateIdLabels() {
   idLayerGroup.clearLayers();
-  const currentLayer = getActiveLayer();
-  currentLayer.eachLayer(l => {
-    const id = l.feature?.properties?.id;
+  provincesLayer.eachLayer(l => {
+    const id = l.feature.properties?.id;
     if (id) {
       const center = l.getBounds().getCenter();
       const icon = L.divIcon({ className: 'province-id-label', html: `<div style="font-size:18px; font-weight:bold; color:red; text-shadow:1px 1px 2px white;">${id}</div>`, iconSize: [30, 30] });
