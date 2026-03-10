@@ -186,15 +186,15 @@ function loadGeoJSON() {
         }
       }));
 
-      // Создаём глобальный слой provincesLayer
-      provincesLayer = L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
+      // Политическая карта
+      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
         style: politicalStyle,
         onEachFeature: onEachProvince,
         smoothFactor: 0,
         noClip: true
       }).addTo(politicalLayer);
 
-      // Добавляем остальные слои
+      // Религиозная карта
       L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
         style: religionStyle,
         onEachFeature: onEachProvince,
@@ -202,6 +202,7 @@ function loadGeoJSON() {
         noClip: true
       }).addTo(religionLayer);
 
+      // Расовая карта
       L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
         style: raceStyle,
         onEachFeature: onEachProvince,
@@ -209,6 +210,7 @@ function loadGeoJSON() {
         noClip: true
       }).addTo(raceLayer);
 
+      // Ресурсная карта
       L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
         style: resourceStyle,
         onEachFeature: onEachProvince,
@@ -216,6 +218,7 @@ function loadGeoJSON() {
         noClip: true
       }).addTo(resourceLayer);
 
+      // Торговые зоны
       L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
         style: tradeZoneStyle,
         onEachFeature: onEachProvince,
@@ -224,7 +227,7 @@ function loadGeoJSON() {
       }).addTo(tradeZoneLayer);
 
       // Создание легенд и контроллера слоёв
-      createLegend('state', countryColors);
+      createLegend('state', countryColors); // Политическая (по умолчанию)
       createLayerControl();
       createIdToggleButton();
     })
@@ -249,50 +252,18 @@ function onEachProvince(feature, layer) {
   const info = provinceData[id];
   let content = `ID: ${id}`;
   if (info) {
-    content = `ID: ${id}<br>Название провинции: ${info.name || 'Неизвестно'}<br>Раса: ${info.race || 'Неизвестно'}<br>Религия: ${info.religion || 'Неизвестно'}<br>Ресурс: ${info.resource || 'Неизвестно'}`;
+    content = `ID: ${id}<br>Название провинции: ${info.name}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Ресурс: ${info.resource}`;
   }
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', e => {
-    // Сбрасываем подсветку всех провинций в активном слое
-    const currentLayer = getActiveLayer();
-    currentLayer.eachLayer(l => {
-      const layerId = l.feature?.properties?.id;
-      if (layerId && provinceData[layerId]) {
-        const color = countryColors[provinceData[layerId].state];
-        if (color) {
-          l.setStyle({ fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 });
-        } else {
-          l.setStyle({ fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 });
-        }
-      }
-    });
-
-    // Подсвечиваем выбранную провинцию
+    getActiveLayer.resetStyle();
     e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
     e.target.bringToFront();
     layer.openPopup();
   });
+  layer.on('popupclose', () => getActiveLayer.resetStyle());
 }
-
-map.on('click', e => {
-  // Закрываем все попапы
-  map.closePopup();
-
-  // Сбрасываем подсветку всех провинций в активном слое
-  const currentLayer = getActiveLayer();
-  currentLayer.eachLayer(l => {
-    const layerId = l.feature?.properties?.id;
-    if (layerId && provinceData[layerId]) {
-      const color = countryColors[provinceData[layerId].state];
-      if (color) {
-        l.setStyle({ fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 });
-      } else {
-        l.setStyle({ fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 });
-      }
-    }
-  });
-});
 
 // ───────────────────────────────
 // Легенда
