@@ -246,35 +246,41 @@ function getActiveLayer() {
 
 // Функция для popup и клика по провинции
 function onEachProvince(feature, layer) {
+
   const id = feature.properties?.id;
   if (!id) return;
 
   const info = provinceData[id];
-  let content = `ID: ${id}`;
 
+  let content = `ID: ${id}`;
   if (info) {
-    content = `ID: ${id}<br>
-               Название провинции: ${info.name}<br>
-               Раса: ${info.race}<br>
-               Религия: ${info.religion}<br>
-               Ресурс: ${info.resource}`;
+    content =
+      `ID: ${id}<br>
+       Название провинции: ${info.name}<br>
+       Раса: ${info.race}<br>
+       Религия: ${info.religion}<br>
+       Ресурс: ${info.resource}`;
   }
 
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
+  // сохраняем исходный стиль
+  layer.defaultStyle = {
+    fillColor: layer.options.fillColor,
+    fillOpacity: layer.options.fillOpacity,
+    color: layer.options.color,
+    weight: layer.options.weight
+  };
+
   layer.on('click', e => {
 
-    const activeLayer = getActiveLayer();
-
-    // Сброс подсветки предыдущей провинции
-    if (selectedProvince && activeLayer) {
-      activeLayer.resetStyle(selectedProvince);
+    // сброс предыдущей подсветки
+    if (selectedProvince) {
+      selectedProvince.setStyle(selectedProvince.defaultStyle);
     }
 
-    // Сохраняем текущую провинцию
     selectedProvince = e.target;
 
-    // Подсветка
     selectedProvince.setStyle({
       fillColor: '#ffff99',
       fillOpacity: 0.6,
@@ -287,12 +293,12 @@ function onEachProvince(feature, layer) {
   });
 
   layer.on('popupclose', () => {
-    const activeLayer = getActiveLayer();
-    if (selectedProvince && activeLayer) {
-      activeLayer.resetStyle(selectedProvince);
+    if (selectedProvince) {
+      selectedProvince.setStyle(selectedProvince.defaultStyle);
       selectedProvince = null;
     }
   });
+
 }
 
 // ───────────────────────────────
