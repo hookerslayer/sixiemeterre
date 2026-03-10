@@ -242,9 +242,17 @@ function onEachProvince(feature, layer) {
   const info = provinceData[id];
   let content = `ID: ${id}`;
   if (info) {
-    content = `ID: ${id}<br>Название провинции: ${info.name || 'Неизвестно'}<br>Раса: ${info.race || 'Неизвестно'}<br>Религия: ${info.religion || 'Неизвестно'}<br>Ресурс: ${info.resource || 'Неизвестно'}`;
+    content = `ID: ${id}<br>Название провинции: ${info.name}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Ресурс: ${info.resource}`;
   }
   layer.bindPopup(content, { autoPan: true, closeButton: true });
+
+  layer.on('click', e => {
+    provincesLayer.resetStyle();
+    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
+    e.target.bringToFront();
+    layer.openPopup();
+  });
+  layer.on('popupclose', () => provincesLayer.resetStyle());
 }
 
 // ───────────────────────────────
