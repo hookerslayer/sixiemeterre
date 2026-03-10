@@ -234,9 +234,7 @@ function loadGeoJSON() {
     .catch(err => { console.error(err); alert(err); });
 }
 
-// Функция поиска провинции по ID
 function searchProvinceById() {
-  // Создаём элемент для строки поиска
   const searchControl = L.control({ position: 'topright' });
   searchControl.onAdd = () => {
     const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-search');
@@ -269,35 +267,32 @@ function searchProvinceById() {
       </button>
     `;
 
-    // Обработчик нажатия на кнопку "Найти"
     div.querySelector('#search-button').addEventListener('click', () => {
       const searchId = div.querySelector('#province-search').value.trim();
       if (!searchId) return;
 
-      // Ищем провинцию по ID
       let foundLayer = null;
-      const currentLayer = getActiveLayer();
-      currentLayer.eachLayer(layer => {
-        const id = layer.feature?.properties?.id;
-        if (id && id.toString() === searchId) {
-          foundLayer = layer;
-        }
+      // Ищем во всех слоях
+      [politicalLayer, religionLayer, raceLayer, resourceLayer, tradeZoneLayer].forEach(layer => {
+        layer.eachLayer(l => {
+          const id = l.feature?.properties?.id;
+          if (id && id.toString() === searchId) {
+            foundLayer = l;
+          }
+        });
       });
 
       if (foundLayer) {
-        // Центрируем карту на найденной провинции
         map.fitBounds(foundLayer.getBounds());
-        // Открываем popup
         foundLayer.openPopup();
-        // Подсвечиваем провинцию (опционально)
         foundLayer.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
         foundLayer.bringToFront();
       } else {
         alert(`Провинция с ID ${searchId} не найдена!`);
+        console.log("Не найдено. Доступные ID:", Object.keys(provinceData));
       }
     });
 
-    // Обработчик нажатия Enter в поле ввода
     div.querySelector('#province-search').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         div.querySelector('#search-button').click();
