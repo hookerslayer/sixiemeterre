@@ -26,6 +26,14 @@ const angle = Math.PI / 2;
 
 map.legend = null;
 
+// Обработчик клика по карте (вне провинций)
+map.on('click', e => {
+  if (!e.target || !e.target.feature) {
+    map.closePopup();
+    resetHighlight();
+  }
+});
+
 // ───────────────────────────────
 // Google Sheets CSV ссылки
 const sheet1URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQHKLat89I0Y8aYJgrEbK9CRsDJdaIlvgLEgtzT8WP8m6nGgd9GShkzLQFLShQwjsg9KXOeCtN0p47_/pub?gid=0&single=true&output=csv';
