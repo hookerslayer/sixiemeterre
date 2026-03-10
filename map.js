@@ -269,6 +269,7 @@ layer.on('popupclose', () => {
   const activeLayer = getActiveLayer();
   if (activeLayer && activeLayer.resetStyle) activeLayer.resetStyle();
 });
+}
 
 // ───────────────────────────────
 // Легенда
