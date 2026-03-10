@@ -249,7 +249,7 @@ function getActiveLayer() {
 let geojsonLayers = [politicalLayer, religionLayer, raceLayer, resourceLayer, tradeZoneLayer];
 
 // ───────────────────────────────
-// Массив для хранения подсвеченных при поиске провинций
+// Массивы для хранения подсвеченных провинций
 let searchHighlights = [];
 let clickHighlights = [];
 
@@ -263,27 +263,24 @@ function getActiveLayer() {
   return politicalLayer;
 }
 
-// Функция получения стиля для провинции по текущему активному слою
+// Вспомогательная функция для сохранения текущего стиля провинции
 function getCurrentStyle(province) {
-  const layer = getActiveLayer();
-  if (!province || !province.feature) return {};
-  if (layer === politicalLayer) return politicalStyle(province.feature);
-  if (layer === religionLayer) return religionStyle(province.feature);
-  if (layer === raceLayer) return raceStyle(province.feature);
-  if (layer === resourceLayer) return resourceStyle(province.feature);
-  if (layer === tradeZoneLayer) return tradeZoneStyle(province.feature);
-  return {};
+  return {
+    fillColor: province.options.fillColor || '',
+    fillOpacity: province.options.fillOpacity || 0,
+    color: province.options.color || '',
+    weight: province.options.weight || 0,
+    opacity: province.options.opacity || 0
+  };
 }
 
 // ───────────────────────────────
-// Подсветка провинций при поиске по ID (включая группы)
+// Подсветка провинций при поиске по ID
 function highlightProvinceById(id) {
   const inputId = id.toString().trim();
 
   // Сброс предыдущей подсветки поиска
-  searchHighlights.forEach(prov => {
-    prov.setStyle(getCurrentStyle(prov));
-  });
+  searchHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
   searchHighlights = [];
 
   let found = false;
@@ -297,6 +294,8 @@ function highlightProvinceById(id) {
         const groupId = (province.feature?.properties?.groupId || provinceId).toString();
 
         if (provinceId === inputId || groupId === inputId) {
+          province.defaultStyle = province.defaultStyle || getCurrentStyle(province);
+
           // Подсветка красной обводкой
           province.setStyle({
             color: '#ff0000',
@@ -305,7 +304,6 @@ function highlightProvinceById(id) {
             fillOpacity: (province.options.fillOpacity || 0.3) * 0.7
           });
           province.bringToFront();
-
           searchHighlights.push(province);
           found = true;
         }
@@ -313,36 +311,25 @@ function highlightProvinceById(id) {
     });
   });
 
-  if (!found) {
-    alert("Провинция с таким ID не найдена");
-  } else {
-    // Центрируем карту на первую найденную провинцию
-    map.fitBounds(searchHighlights[0].getBounds(), { maxZoom: -1 });
-  }
+  if (!found) alert("Провинция с таким ID не найдена");
+  else map.fitBounds(searchHighlights[0].getBounds(), { maxZoom: -1 });
 }
 
-// ───────────────────────────────
 // Обработчик кнопки поиска
 function searchProvince() {
   const input = document.getElementById("provinceSearch");
   if (!input) return;
   const id = input.value.trim();
   if (!id) return;
+
+  // Сбрасываем подсветку клика перед новым поиском
+  clickHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
+  clickHighlights = [];
+
   highlightProvinceById(id);
 }
 
 // ───────────────────────────────
-// Вспомогательная функция для получения текущего стиля (учитывая активный слой)
-function getCurrentStyle(province) {
-  return {
-    fillColor: province.options.fillColor || '',
-    fillOpacity: province.options.fillOpacity || 0,
-    color: province.options.color || '#000',
-    weight: province.options.weight || 1.5,
-    opacity: province.options.opacity || 0
-  };
-}
-
 // Обработчик клика и pop-up для каждой провинции
 function onEachProvince(feature, layer) {
   const id = feature.properties?.id;
@@ -356,11 +343,11 @@ function onEachProvince(feature, layer) {
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', () => {
-    // Сбрасываем подсветку поиска
+    // Сброс подсветки поиска
     searchHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
     searchHighlights = [];
 
-    // Сбрасываем предыдущую подсветку клика
+    // Сброс предыдущей подсветки клика
     clickHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
     clickHighlights = [];
 
@@ -368,26 +355,20 @@ function onEachProvince(feature, layer) {
     geojsonLayers.forEach(layerGroup => {
       layerGroup.eachLayer(l => {
         if (!l.eachLayer) return;
+
         l.eachLayer(p => {
           const pId = p.feature?.properties?.id;
           if (pId === id) {
             p.defaultStyle = p.defaultStyle || getCurrentStyle(p);
 
-            // Если провинция нейтральная, подсвечиваем
-            const isNeutral = p.defaultStyle.fillOpacity === 0 || p.defaultStyle.fillColor === '';
-            if (isNeutral) {
-              p.setStyle({
-                fillColor: '#ffff99',
-                fillOpacity: 0.6,
-                color: '#000',
-                weight: 0
-              });
-            } else {
-              // Если уже окрашена (активный слой), оставляем fillColor и fillOpacity, но подсвечиваем слегка
-              p.setStyle({
-                fillOpacity: Math.max(p.defaultStyle.fillOpacity, 0.6),
-              });
-            }
+            // Любая провинция подсвечивается светло-жёлтым при клике
+            p.setStyle({
+              fillColor: '#ffff99',
+              fillOpacity: 0.6,
+              color: '#000',
+              weight: 0
+            });
+
             p.bringToFront();
             clickHighlights.push(p);
           }
@@ -399,12 +380,11 @@ function onEachProvince(feature, layer) {
   });
 }
 
+// ───────────────────────────────
 // Сброс подсветки при клике по пустой области карты
 map.on('click', e => {
-  // Сброс подсветки клика
   clickHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
   clickHighlights = [];
-  // Сброс подсветки поиска
   searchHighlights.forEach(p => p.setStyle(p.defaultStyle || getCurrentStyle(p)));
   searchHighlights = [];
 });
