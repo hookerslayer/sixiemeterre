@@ -34,6 +34,17 @@ let provinceData = {};
 let countryColors = {};
 let provincesLayer;
 let idLayerGroup = L.layerGroup(); // Слой для ID (по умолчанию скрыт)
+let religionColors = {};  // Цвета религий
+let raceColors = {};      // Цвета рас
+let resourceColors = {};  // Цвета ресурсов
+let tradeZoneColors = {}; // Цвета торговых зон
+
+// Слои для каждого типа карты
+const politicalLayer = L.layerGroup().addTo(map);  // Политическая (уже есть)
+const religionLayer = L.layerGroup();              // Религиозная
+const raceLayer = L.layerGroup();                  // Расовая
+const resourceLayer = L.layerGroup();             // Ресурсная
+const tradeZoneLayer = L.layerGroup();             // Торговые зоны
 
 // ───────────────────────────────
 // Иконки для маркеров
@@ -66,22 +77,92 @@ capitalMarker.on('dragend', e => {
 // Загрузка CSV с данными провинций и цветов государств
 Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.text())])
   .then(([csv1, csv2]) => {
+    // Загрузка данных провинций (sheet1URL)
     csv1.trim().split('\n').slice(1).forEach(rowStr => {
       const cols = rowStr.split(',');
       const id = cols[0];
       if (!id) return;
-      provinceData[id] = { area: cols[1], name: cols[2], state: cols[3], race: cols[4], religion: cols[5], population: cols[6], resource: cols[7] };
+      provinceData[id] = {
+        area: cols[1],
+        name: cols[2],
+        state: cols[3],
+        race: cols[4],       // Раса
+        religion: cols[5],   // Религия
+        population: cols[6],
+        resource: cols[7],   // Ресурс
+        tradeZone: cols[8]    // Торговая зона
+      };
     });
 
+    // Загрузка цветов (sheet2URL)
     csv2.trim().split('\n').slice(1).forEach(rowStr => {
       const cols = rowStr.split(',');
-      if (!cols[0] || !cols[1]) return;
-      countryColors[cols[0]] = '#' + cols[1];
+      // Государства
+      if (cols[0] && cols[1]) countryColors[cols[0]] = '#' + cols[1];
+      // Религии (столбец G и H)
+      if (cols[6] && cols[7]) religionColors[cols[6]] = '#' + cols[7];
+      // Расы (столбец D и E)
+      if (cols[3] && cols[4]) raceColors[cols[3]] = '#' + cols[4];
+      // Ресурсы (столбец J и K)
+      if (cols[9] && cols[10]) resourceColors[cols[9]] = '#' + cols[10];
+      // Торговые зоны (столбец M и N)
+      if (cols[12] && cols[13]) tradeZoneColors[cols[12]] = '#' + cols[13];
     });
 
+    // Загрузка GeoJSON и создание слоёв
     loadGeoJSON();
     loadMarkers();
   });
+
+// Стиль для политической карты (уже есть)
+function politicalStyle(f) {
+  const id = f.properties?.id;
+  if (id && provinceData[id]) {
+    const color = countryColors[provinceData[id].state];
+    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
+  }
+  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
+}
+
+// Стиль для религиозной карты
+function religionStyle(f) {
+  const id = f.properties?.id;
+  if (id && provinceData[id]) {
+    const color = religionColors[provinceData[id].religion];
+    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
+  }
+  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
+}
+
+// Стиль для расовой карты
+function raceStyle(f) {
+  const id = f.properties?.id;
+  if (id && provinceData[id]) {
+    const color = raceColors[provinceData[id].race];
+    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
+  }
+  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
+}
+
+// Стиль для ресурсной карты
+function resourceStyle(f) {
+  const id = f.properties?.id;
+  if (id && provinceData[id]) {
+    const color = resourceColors[provinceData[id].resource];
+    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
+  }
+  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
+}
+
+// Стиль для торговых зон
+function tradeZoneStyle(f) {
+  const id = f.properties?.id;
+  if (id && provinceData[id]) {
+    const color = tradeZoneColors[provinceData[id].tradeZone];
+    if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
+  }
+  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
+}
 
 // ───────────────────────────────
 // Загрузка GeoJSON
@@ -92,35 +173,66 @@ function loadGeoJSON() {
       const recalculatedFeatures = data.features.map(f => ({
         ...f,
         geometry: { ...f.geometry,
-          coordinates: f.geometry.coordinates.map(polygon => polygon.map(ring => ring.map(p => {
-            const x = p[0], y = p[1];
-            const px = (x - (-760.292207764065)) / 2.370967741935;
-            const py = (y - 1579.390922422695) / (-2.370919458304);
-            const dx = px - imgWidth / 2, dy = py - imgHeight / 2;
-            const cos = Math.cos(angle), sin = Math.sin(angle);
-            const newPx = cos * dx - sin * dy + imgWidth / 2;
-            const newPy = sin * dx + cos * dy + imgHeight / 2;
-            return [newPy + offsetY, newPx + offsetX];
-          })))
+          coordinates: f.geometry.coordinates.map(polygon =>
+            polygon.map(ring =>
+              ring.map(p => {
+                const x = p[0], y = p[1];
+                const px = (x - (-760.292207764065)) / 2.370967741935;
+                const py = (y - 1579.390922422695) / (-2.370919458304);
+                const dx = px - imgWidth / 2, dy = py - imgHeight / 2;
+                const cos = Math.cos(angle), sin = Math.sin(angle);
+                const newPx = cos * dx - sin * dy + imgWidth / 2;
+                const newPy = sin * dx + cos * dy + imgHeight / 2;
+                return [newPy + offsetY, newPx + offsetX];
+              })
+            )
+          )
         }
       }));
 
-      provincesLayer = L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
-        style: f => {
-          const id = f.properties?.id;
-          if (id && provinceData[id]) {
-            const color = countryColors[provinceData[id].state];
-            if (color) return { fillColor: color, fillOpacity: 0.5, color: '#000', weight: 0 };
-          }
-          return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
-        },
+      // Политическая карта
+      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
+        style: politicalStyle,
         onEachFeature: onEachProvince,
         smoothFactor: 0,
         noClip: true
-      }).addTo(map);
+      }).addTo(politicalLayer);
 
-      createLegend();
-      createIdToggleButton();
+      // Религиозная карта
+      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
+        style: religionStyle,
+        onEachFeature: onEachProvince,
+        smoothFactor: 0,
+        noClip: true
+      }).addTo(religionLayer);
+
+      // Расовая карта
+      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
+        style: raceStyle,
+        onEachFeature: onEachProvince,
+        smoothFactor: 0,
+        noClip: true
+      }).addTo(raceLayer);
+
+      // Ресурсная карта
+      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
+        style: resourceStyle,
+        onEachFeature: onEachProvince,
+        smoothFactor: 0,
+        noClip: true
+      }).addTo(resourceLayer);
+
+      // Торговые зоны
+      L.geoJSON({ type: 'FeatureCollection', features: recalculatedFeatures }, {
+        style: tradeZoneStyle,
+        onEachFeature: onEachProvince,
+        smoothFactor: 0,
+        noClip: true
+      }).addTo(tradeZoneLayer);
+
+      // Создание легенд и контроллера слоёв
+      createLegend('state', countryColors); // Политическая (по умолчанию)
+      createLayerControl();
     })
     .catch(err => { console.error(err); alert(err); });
 }
@@ -164,7 +276,10 @@ function resetHighlight() {
     }
   });
 }
-function createLegend() {
+function createLegend(type, colors) {
+  // Удалить старую легенду, если она есть
+  if (map.legend) map.removeControl(map.legend);
+
   const legend = L.control({ position: 'topright' });
   legend.onAdd = () => {
     const div = L.DomUtil.create('div', 'info legend');
@@ -173,26 +288,90 @@ function createLegend() {
     div.style.border = '1px solid #ccc';
     div.style.maxHeight = '400px';
     div.style.overflowY = 'auto';
-    div.innerHTML = '<b>Государства</b><br>';
+    div.innerHTML = `<b>${type === 'state' ? 'Государства' :
+                     type === 'religion' ? 'Религии' :
+                     type === 'race' ? 'Расы' :
+                     type === 'resource' ? 'Ресурсы' : 'Торговые зоны'}</b><br>`;
 
-    for (const [state, color] of Object.entries(countryColors)) {
+    for (const [name, color] of Object.entries(colors)) {
       const item = document.createElement('div');
-      item.style.display = 'flex'; item.style.alignItems = 'center'; item.style.marginBottom = '4px'; item.style.cursor = 'pointer';
+      item.style.display = 'flex';
+      item.style.alignItems = 'center';
+      item.style.marginBottom = '4px';
+      item.style.cursor = 'pointer';
 
       const colorBox = document.createElement('div');
-      colorBox.style.width = '20px'; colorBox.style.height = '20px'; colorBox.style.backgroundColor = color;
-      colorBox.style.marginRight = '6px'; colorBox.style.border = '1px solid #000';
+      colorBox.style.width = '20px';
+      colorBox.style.height = '20px';
+      colorBox.style.backgroundColor = color;
+      colorBox.style.marginRight = '6px';
+      colorBox.style.border = '1px solid #000';
 
-      const label = document.createElement('span'); label.textContent = state;
+      const label = document.createElement('span');
+      label.textContent = name;
 
-      item.appendChild(colorBox); item.appendChild(label); div.appendChild(item);
+      item.appendChild(colorBox);
+      item.appendChild(label);
+      div.appendChild(item);
 
-      item.addEventListener('mouseenter', () => highlightState(state));
-      item.addEventListener('mouseleave', () => resetHighlight());
+      // Подсветка при наведении
+      item.addEventListener('mouseenter', () => highlightByType(type, name));
+      item.addEventListener('mouseleave', resetHighlight);
     }
     return div;
   };
   legend.addTo(map);
+  map.legend = legend; // Сохраняем ссылку для удаления
+}
+
+// Подсветка провинций по типу (религия, раса и т.д.)
+function highlightByType(type, name) {
+  const currentLayer = getActiveLayer();
+  currentLayer.eachLayer(l => {
+    const id = l.feature.properties?.id;
+    if (id && provinceData[id] && provinceData[id][type] === name) {
+      l.setStyle({ fillOpacity: 0.8 });
+      l.bringToFront();
+    }
+  });
+}
+
+// Сброс подсветки
+function resetHighlight() {
+  const currentLayer = getActiveLayer();
+  currentLayer.eachLayer(l => {
+    l.setStyle(currentLayer.options.style(l.feature));
+  });
+}
+
+// Получение активного слоя
+function getActiveLayer() {
+  if (map.hasLayer(politicalLayer)) return politicalLayer;
+  if (map.hasLayer(religionLayer)) return religionLayer;
+  if (map.hasLayer(raceLayer)) return raceLayer;
+  if (map.hasLayer(resourceLayer)) return resourceLayer;
+  if (map.hasLayer(tradeZoneLayer)) return tradeZoneLayer;
+  return politicalLayer;
+}
+
+function createLayerControl() {
+  L.control.layers({
+    'Политическая карта': politicalLayer,
+    'Религиозная карта': religionLayer,
+    'Расовая карта': raceLayer,
+    'Ресурсная карта': resourceLayer,
+    'Торговые зоны': tradeZoneLayer
+  }, null, { position: 'topleft' }).addTo(map);
+
+  // События при переключении слоёв
+  map.on('baselayerchange', e => {
+    const layerName = e.name;
+    if (layerName === 'Политическая карта') createLegend('state', countryColors);
+    if (layerName === 'Религиозная карта') createLegend('religion', religionColors);
+    if (layerName === 'Расовая карта') createLegend('race', raceColors);
+    if (layerName === 'Ресурсная карта') createLegend('resource', resourceColors);
+    if (layerName === 'Торговые зоны') createLegend('tradeZone', tradeZoneColors);
+  });
 }
 
 // ───────────────────────────────
@@ -260,4 +439,5 @@ function loadMarkers() {
     'Отслеживание координат': coordinateTrackingLayer
   }).addTo(map);
 }
+
 
