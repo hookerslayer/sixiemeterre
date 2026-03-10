@@ -270,11 +270,12 @@ function searchProvinceById(id) {
 
         searchHighlight = province;
 
-        province.setStyle({
-          color: '#ff0000',
-          weight: 3,
-          fillOpacity: province.options.fillOpacity
-        });
+      province.setStyle({
+        color: '#ff0000',
+        weight: 3,
+        opacity: 1,
+        fillOpacity: 0.3
+      });
 
         province.bringToFront();
 
