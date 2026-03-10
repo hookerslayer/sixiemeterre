@@ -255,7 +255,7 @@ function onEachProvince(feature, layer) {
 
   layer.on('click', e => {
     resetHighlight(); // Сбрасываем подсветку всех провинций
-    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
+    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 }); // Подсвечиваем жёлтым
     e.target.bringToFront();
     layer.openPopup();
   });
@@ -316,7 +316,7 @@ function createLegend(type, colors) {
 function highlightByType(type, name) {
   const currentLayer = getActiveLayer();
   currentLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
+    const id = l.feature?.properties?.id;
     if (id && provinceData[id] && provinceData[id][type] === name) {
       l.setStyle({ fillOpacity: 0.8 });
       l.bringToFront();
@@ -328,7 +328,7 @@ function highlightByType(type, name) {
 function resetHighlight() {
   const currentLayer = getActiveLayer();
   currentLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
+    const id = l.feature?.properties?.id;
     if (id && provinceData[id]) {
       // Определяем, какой стиль применить в зависимости от активного слоя
       let styleFunc;
@@ -380,7 +380,7 @@ function generateIdLabels() {
   idLayerGroup.clearLayers();
   const currentLayer = getActiveLayer();
   currentLayer.eachLayer(l => {
-    const id = l.feature.properties?.id;
+    const id = l.feature?.properties?.id;
     if (id) {
       const center = l.getBounds().getCenter();
       const icon = L.divIcon({ className: 'province-id-label', html: `<div style="font-size:18px; font-weight:bold; color:red; text-shadow:1px 1px 2px white;">${id}</div>`, iconSize: [30, 30] });
