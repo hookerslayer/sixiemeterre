@@ -20,6 +20,14 @@ L.imageOverlay('karta.png', imageBounds, {
 
 map.fitBounds(imageBounds);
 
+map.on('click', e => {
+  // Если клик не по провинции — просто закрываем popup и сбрасываем подсветку
+  if (!e.target || !e.target.feature) {
+    map.closePopup();
+    resetHighlight();
+  }
+});
+
 const offsetX = 1027.5;
 const offsetY = 1027.5;
 const angle = Math.PI / 2;
@@ -255,7 +263,7 @@ function onEachProvince(feature, layer) {
 
   layer.on('click', e => {
     resetHighlight(); // Сбрасываем подсветку всех провинций
-    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
+    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 }); // Подсвечиваем жёлтым
     e.target.bringToFront();
     layer.openPopup();
   });
