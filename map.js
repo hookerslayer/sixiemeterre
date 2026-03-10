@@ -344,47 +344,44 @@ function onEachProvince(feature, layer) {
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', () => {
-    const activeLayer = getActiveLayer();
-
-    // Сбрасываем подсветку поиска
-    searchHighlights.forEach(prov => prov.setStyle(getCurrentStyle(prov)));
+    // Сбрасываем предыдущую подсветку поиска
+    searchHighlights.forEach(prov => {
+      if (prov.defaultStyle) prov.setStyle(prov.defaultStyle);
+    });
     searchHighlights = [];
 
-    // Подсветка всех провинций с этим ID или groupId
-    activeLayer.eachLayer(l => {
-      if (!l.eachLayer) return;
+    // Сбрасываем предыдущую подсветку клика по любой провинции
+    geojsonLayers.forEach(layerGroup => {
+      layerGroup.eachLayer(l => {
+        if (!l.eachLayer) return;
+        l.eachLayer(p => {
+          if (p.setStyle && p.defaultStyle) p.setStyle(p.defaultStyle);
+        });
+      });
+    });
 
-      l.eachLayer(prov => {
-        const provinceId = (prov.feature?.properties?.id || '').toString();
-        const groupId = (prov.feature?.properties?.groupId || provinceId).toString();
-
-        if (provinceId === id || groupId === id) {
-          prov.setStyle({
-            fillColor: '#ffff99',
-            fillOpacity: 0.6,
-            color: '#000',
-            weight: 0
-          });
-          prov.bringToFront();
-        } else {
-          // Сбрасываем стиль в соответствии с активным слоем
-          prov.setStyle(getCurrentStyle(prov));
-        }
+    // Подсветка выбранной провинции (или группы)
+    geojsonLayers.forEach(layerGroup => {
+      layerGroup.eachLayer(l => {
+        if (!l.eachLayer) return;
+        l.eachLayer(p => {
+          const pId = p.feature?.properties?.id;
+          if (pId === id) {
+            // Сохраняем исходный стиль
+            p.defaultStyle = p.defaultStyle || getCurrentStyle(p);
+            p.setStyle({
+              fillColor: '#ffff99',
+              fillOpacity: 0.6,
+              color: '#ff0000',
+              weight: 2
+            });
+            p.bringToFront();
+          }
+        });
       });
     });
 
     layer.openPopup();
-  });
-
-  layer.on('popupclose', () => {
-    // При закрытии popup сбросить все провинции к стилю активного слоя
-    const activeLayer = getActiveLayer();
-    if (activeLayer && activeLayer.eachLayer) {
-      activeLayer.eachLayer(l => {
-        if (!l.eachLayer) return;
-        l.eachLayer(prov => prov.setStyle(getCurrentStyle(prov)));
-      });
-    }
   });
 }
 
