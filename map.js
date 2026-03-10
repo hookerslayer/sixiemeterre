@@ -145,45 +145,87 @@ function politicalStyle(f) {
 
   const id = f.properties?.id;
 
-  if (id && provinceData[id]) {
-
-    const province = provinceData[id];
-
-    let style = {
-      fillOpacity: 0,
-      color: '#000',
-      weight: 1.5,
-      opacity: 0
-    };
-
-    if (province.state) {
-
-      const baseColor = countryColors[province.state];
-
-      if (baseColor) {
-        style.fillColor = baseColor;
-        style.fillOpacity = 0.5;
-        style.color = '#000';
-        style.weight = 0;
-      }
-
-    }
-
-    // Проверка оккупации
-    if (province.occupation) {
-
-      const pattern = getOccupationPattern(province.occupation);
-
-      if (pattern) {
-        style.fillPattern = pattern;
-      }
-
-    }
-
-    return style;
+  if (!id || !provinceData[id]) {
+    return { fillOpacity:0 };
   }
 
-  return { fillOpacity: 0, color: '#000', weight: 1.5, opacity: 0 };
+  const province = provinceData[id];
+
+  debugOccupation(id, province);
+
+  let style = {
+    fillOpacity:0,
+    color:'#000',
+    weight:1.5,
+    opacity:0
+  };
+
+  if (province.state) {
+
+    const baseColor = countryColors[province.state];
+
+    if (baseColor) {
+
+      style.fillColor = baseColor;
+      style.fillOpacity = 0.5;
+      style.weight = 0;
+
+    }
+
+  }
+
+  if (province.occupation) {
+
+    const color = countryColors[province.occupation];
+
+    console.log("TRY PATTERN:", id, province.occupation, color);
+
+    if (color) {
+
+      const pattern = new L.StripePattern({
+        color: color,
+        weight: 4,
+        spaceWeight: 4,
+        opacity: 0.8,
+        angle: 45
+      });
+
+      pattern.addTo(map);
+
+      style.fillPattern = pattern;
+
+      console.log("PATTERN APPLIED:", id);
+
+    }
+
+  }
+
+  return style;
+
+}
+
+function debugOccupation(id, province) {
+
+  if (!province) {
+    console.log("NO PROVINCE DATA", id);
+    return;
+  }
+
+  console.log("Province ID:", id);
+  console.log("Owner:", province.state);
+  console.log("Occupant:", province.occupation);
+
+  if (province.occupation) {
+
+    const color = countryColors[province.occupation];
+
+    console.log("Occupant color:", color);
+
+    if (!color) {
+      console.log("COLOR NOT FOUND FOR OCCUPANT");
+    }
+
+  }
 
 }
 
