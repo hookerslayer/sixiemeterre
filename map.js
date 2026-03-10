@@ -254,11 +254,11 @@ function onEachProvince(feature, layer) {
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
   layer.on('click', e => {
+    resetHighlight(); // Сбрасываем подсветку всех провинций
     e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
     e.target.bringToFront();
     layer.openPopup();
   });
-  layer.on('popupclose', () => resetHighlight());
 }
 
 // ───────────────────────────────
@@ -324,11 +324,22 @@ function highlightByType(type, name) {
   });
 }
 
-// Сброс подсветки
 function resetHighlight() {
   const currentLayer = getActiveLayer();
   currentLayer.eachLayer(l => {
-    l.setStyle(currentLayer.options.style(l.feature));
+    const id = l.feature.properties?.id;
+    if (id && provinceData[id]) {
+      // Определяем, какой стиль применить в зависимости от активного слоя
+      let styleFunc;
+      if (map.hasLayer(politicalLayer)) styleFunc = politicalStyle;
+      else if (map.hasLayer(religionLayer)) styleFunc = religionStyle;
+      else if (map.hasLayer(raceLayer)) styleFunc = raceStyle;
+      else if (map.hasLayer(resourceLayer)) styleFunc = resourceStyle;
+      else if (map.hasLayer(tradeZoneLayer)) styleFunc = tradeZoneStyle;
+      else styleFunc = politicalStyle;
+
+      l.setStyle(styleFunc(l.feature));
+    }
   });
 }
 
@@ -376,6 +387,7 @@ function generateIdLabels() {
     }
   });
 }
+
 function createIdToggleButton() {
   const toggle = L.control({ position: 'topleft' });
   toggle.onAdd = () => {
