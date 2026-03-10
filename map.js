@@ -256,14 +256,19 @@ function onEachProvince(feature, layer) {
   }
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
-  layer.on('click', e => {
-    getActiveLayer.resetStyle();
-    e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
-    e.target.bringToFront();
-    layer.openPopup();
-  });
-  layer.on('popupclose', () => getActiveLayer.resetStyle());
-}
+layer.on('click', e => {
+  const activeLayer = getActiveLayer();
+  if (activeLayer && activeLayer.resetStyle) activeLayer.resetStyle();
+
+  e.target.setStyle({ fillColor: '#ffff99', fillOpacity: 0.6, color: '#000', weight: 0 });
+  e.target.bringToFront();
+  layer.openPopup();
+});
+
+layer.on('popupclose', () => {
+  const activeLayer = getActiveLayer();
+  if (activeLayer && activeLayer.resetStyle) activeLayer.resetStyle();
+});
 
 // ───────────────────────────────
 // Легенда
