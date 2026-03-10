@@ -308,66 +308,58 @@ function searchProvince() {
 
 // Функция для popup и клика по провинции
 function onEachProvince(feature, layer) {
-
   const id = feature.properties?.id;
   if (!id) return;
 
-  const info = provinceData[id];
+  // Запоминаем исходный стиль каждой провинции
+  layer.defaultStyle = layer.options.style ? layer.options.style(layer.feature) : {
+    fillOpacity: 0,
+    color: '#000',
+    weight: 1.5,
+    opacity: 0
+  };
+  layer.setStyle(layer.defaultStyle);
 
+  // Создаем popup
+  const info = provinceData[id];
   let content = `ID: ${id}`;
   if (info) {
-    content =
-      `ID: ${id}<br>
-       Название провинции: ${info.name}<br>
-       Раса: ${info.race}<br>
-       Религия: ${info.religion}<br>
-       Ресурс: ${info.resource}`;
+    content = `ID: ${id}<br>Название провинции: ${info.name}<br>Раса: ${info.race}<br>Религия: ${info.religion}<br>Ресурс: ${info.resource}`;
   }
-
   layer.bindPopup(content, { autoPan: true, closeButton: true });
 
-  // сохраняем исходный стиль
-  layer.defaultStyle = {
-    fillColor: layer.options.fillColor,
-    fillOpacity: layer.options.fillOpacity,
-    color: layer.options.color,
-    weight: layer.options.weight
-  };
-
+  // Обработчик клика по провинции
   layer.on('click', e => {
+    // Сброс подсветки предыдущей выбранной провинции
+    if (selectedProvince) {
+      selectedProvince.setStyle(selectedProvince.defaultStyle);
+    }
+    // Сброс подсветки поиска
+    if (searchHighlight) {
+      searchHighlight.setStyle(searchHighlight.defaultStyle);
+      searchHighlight = null;
+    }
 
-  // сброс подсветки найденной провинции
-  if (searchHighlight) {
-    searchHighlight.setStyle(searchHighlight.defaultStyle);
-    searchHighlight = null;
-  }
+    // Подсветка текущей кликом
+    e.target.setStyle({
+      fillColor: '#ffff99',
+      fillOpacity: 0.6,
+      color: '#000',
+      weight: 0
+    });
+    e.target.bringToFront();
+    e.target.openPopup();
 
-  // сброс предыдущей подсветки кликом
-  if (selectedProvince) {
-    selectedProvince.setStyle(selectedProvince.defaultStyle);
-  }
-
-  selectedProvince = e.target;
-
-  selectedProvince.setStyle({
-    fillColor: '#ffff99',
-    fillOpacity: 0.6,
-    color: '#000',
-    weight: 0
+    selectedProvince = e.target;
   });
 
-  selectedProvince.bringToFront();
-  selectedProvince.openPopup();
-
-});
-
+  // Сброс подсветки при закрытии popup (если нужно)
   layer.on('popupclose', () => {
     if (selectedProvince) {
       selectedProvince.setStyle(selectedProvince.defaultStyle);
       selectedProvince = null;
     }
   });
-
 }
 
 // ───────────────────────────────
