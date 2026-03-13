@@ -12,7 +12,7 @@ const imgWidth = 7015;
 const imgHeight = 4960;
 const imageBounds = [[0, imgHeight], [imgWidth, 0]];
 
-L.imageOverlay('karta.png', imageBounds, {
+L.imageOverlay('karta4.png', imageBounds, {
   opacity: 1.0,
   interactive: false,
   attribution: false
