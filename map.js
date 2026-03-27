@@ -153,8 +153,6 @@ function politicalStyle(f) {
 
   const province = provinceData[id];
 
-  debugOccupation(id, province);
-
   let style = {
     fillOpacity:0,
     color:'#000',
@@ -203,31 +201,6 @@ function politicalStyle(f) {
   }
 
   return style;
-
-}
-
-function debugOccupation(id, province) {
-
-  if (!province) {
-    console.log("NO PROVINCE DATA", id);
-    return;
-  }
-
-  console.log("Province ID:", id);
-  console.log("Owner:", province.state);
-  console.log("Occupant:", province.occupation);
-
-  if (province.occupation) {
-
-    const color = countryColors[province.occupation];
-
-    console.log("Occupant color:", color);
-
-    if (!color) {
-      console.log("COLOR NOT FOUND FOR OCCUPANT");
-    }
-
-  }
 
 }
 
