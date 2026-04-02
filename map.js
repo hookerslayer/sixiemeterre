@@ -92,8 +92,7 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
         religion: cols[5],
         population: cols[6],
         resource: cols[7],
-        tradeZone: cols[8],
-        occupation: cols[18]
+        tradeZone: cols[8]
       };
     });
 
@@ -113,34 +112,6 @@ Promise.all([fetch(sheet1URL).then(r => r.text()), fetch(sheet2URL).then(r => r.
     loadGeoJSON();
     loadMarkers();
   });
-
-let occupationPatterns = {};
-
-function getOccupationPattern(stateName) {
-
-  if (!stateName) return null;
-
-  if (occupationPatterns[stateName]) {
-    return occupationPatterns[stateName];
-  }
-
-  const color = countryColors[stateName];
-  if (!color) return null;
-
-  const pattern = new L.StripePattern({
-    weight: 3,
-    spaceWeight: 4,
-    color: color,
-    opacity: 0.8,
-    angle: 45
-  });
-
-  pattern.addTo(map);
-
-  occupationPatterns[stateName] = pattern;
-
-  return pattern;
-}
 
 // Стиль для политической карты
 function politicalStyle(f) {
@@ -169,32 +140,6 @@ function politicalStyle(f) {
       style.fillColor = baseColor;
       style.fillOpacity = 0.5;
       style.weight = 0;
-
-    }
-
-  }
-
-  if (province.occupation) {
-
-    const color = countryColors[province.occupation];
-
-    console.log("TRY PATTERN:", id, province.occupation, color);
-
-    if (color) {
-
-      const pattern = new L.StripePattern({
-        color: color,
-        weight: 4,
-        spaceWeight: 4,
-        opacity: 0.8,
-        angle: 45
-      });
-
-      pattern.addTo(map);
-
-      style.fillPattern = pattern;
-
-      console.log("PATTERN APPLIED:", id);
 
     }
 
