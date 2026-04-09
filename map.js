@@ -427,17 +427,51 @@ function createLegend(type, colors) {
   legend.onAdd = () => {
     const div = L.DomUtil.create('div', 'info legend');
     div.style.background = 'white';
-    div.style.padding = '10px';
+    div.style.padding = '0'; // Убираем паддинг для заголовка
     div.style.border = '1px solid #ccc';
+    div.style.borderRadius = '4px';
     div.style.maxHeight = '400px';
-    div.style.overflowY = 'auto';
-    div.innerHTML = `<b>${type === 'state' ? 'Государства' :
-                     type === 'religion' ? 'Религии' :
-                     type === 'race' ? 'Расы' :
-                     type === 'resource' ? 'Ресурсы' : 'Торговые зоны'}</b><br>`;
+    div.style.overflow = 'hidden';
+    div.style.minWidth = '200px';
+    div.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
 
+    // Создаем заголовок с кнопкой сворачивания
+    const header = document.createElement('div');
+    header.style.padding = '10px';
+    header.style.background = '#f5f5f5';
+    header.style.borderBottom = '1px solid #ccc';
+    header.style.cursor = 'pointer';
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.fontWeight = 'bold';
+    header.style.userSelect = 'none';
+
+    const title = document.createElement('span');
+    title.textContent = `${type === 'state' ? 'Государства' :
+                         type === 'religion' ? 'Религии' :
+                         type === 'race' ? 'Расы' :
+                         type === 'resource' ? 'Ресурсы' : 'Торговые зоны'}`;
+
+    const toggleBtn = document.createElement('span');
+    toggleBtn.textContent = '▼';
+    toggleBtn.style.fontSize = '12px';
+    toggleBtn.style.transition = 'transform 0.3s';
+
+    header.appendChild(title);
+    header.appendChild(toggleBtn);
+
+    // Создаем контейнер для содержимого
+    const content = document.createElement('div');
+    content.style.padding = '10px';
+    content.style.maxHeight = '350px';
+    content.style.overflowY = 'auto';
+    content.style.display = 'none'; // По умолчанию скрыто
+
+    // Заполняем содержимое
     for (const [name, color] of Object.entries(colors)) {
       if (!name || !color) continue;
+      
       const item = document.createElement('div');
       item.style.display = 'flex';
       item.style.alignItems = 'center';
@@ -450,16 +484,53 @@ function createLegend(type, colors) {
       colorBox.style.backgroundColor = color;
       colorBox.style.marginRight = '6px';
       colorBox.style.border = '1px solid #000';
+      colorBox.style.flexShrink = '0';
 
       const label = document.createElement('span');
       label.textContent = name;
+      label.style.fontSize = '14px';
 
       item.appendChild(colorBox);
       item.appendChild(label);
-      div.appendChild(item);
+      content.appendChild(item);
     }
+
+    // Обработчик сворачивания/разворачивания
+    let isExpanded = false;
+    header.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isExpanded = !isExpanded;
+      
+      if (isExpanded) {
+        content.style.display = 'block';
+        toggleBtn.textContent = '▲';
+        header.style.borderBottom = '1px solid #ccc';
+      } else {
+        content.style.display = 'none';
+        toggleBtn.textContent = '▼';
+        header.style.borderBottom = 'none';
+      }
+    });
+
+    // Добавляем эффект при наведении
+    header.addEventListener('mouseenter', () => {
+      header.style.background = '#e8e8e8';
+    });
+    
+    header.addEventListener('mouseleave', () => {
+      header.style.background = '#f5f5f5';
+    });
+
+    div.appendChild(header);
+    div.appendChild(content);
+
+    // Предотвращаем закрытие всплывающих окон при клике на легенду
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+
     return div;
   };
+  
   legend.addTo(map);
   map.legend = legend; // Сохраняем ссылку для удаления
 }
